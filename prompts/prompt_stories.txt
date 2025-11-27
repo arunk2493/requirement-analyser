@@ -1,0 +1,12 @@
+Break the following product requirement into:
+- EPICS
+- USER STORIES
+- TECH STORIES
+
+Each story must contain:
+- Description
+- Acceptance Criteria
+- (Tech story only) Tech Implementation Outline
+
+Requirement:
+{{requirement}}
