@@ -1,0 +1,15 @@
+STORIES_PROMPT = """
+Break down the following epic into STORIES strictly in JSON ARRAY format.
+
+Each story object must have:
+- name
+- type ("user_story" or "technical_story")
+- description
+- acceptanceCriteria (array)
+- implementationDetails (optional for technical stories)
+
+NO extra text. ONLY JSON array.
+
+Epic:
+{epic}
+"""

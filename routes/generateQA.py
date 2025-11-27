@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from models.file_model import Story, QA
 from config.gemini import generate_json
 from config.db import get_db
+from prompts.qa_prompt import QA_PROMPT
 
 router = APIRouter()
 

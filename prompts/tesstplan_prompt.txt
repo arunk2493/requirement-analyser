@@ -1,0 +1,15 @@
+TESTPLAN_PROMPT = """
+Generate a detailed TEST PLAN strictly in JSON ARRAY format.
+
+Each test plan object must include:
+- title
+- objective
+- preconditions
+- testScenarios (array)
+- risks
+
+NO explanations. NO text outside JSON.
+
+Story:
+{story}
+"""

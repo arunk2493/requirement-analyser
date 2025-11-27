@@ -1,8 +1,0 @@
-Group the following user stories into EPICS and list:
-
-EPIC TITLE:
-- User Story 1
-- User Story 2
-
-Content:
-{{stories}}

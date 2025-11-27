@@ -1,0 +1,17 @@
+QA_PROMPT = """
+Generate API TEST CASES and AUTOMATION SCRIPTS strictly in JSON array format.
+
+Each object in the array must include:
+- title
+- apiEndpoint
+- method
+- request
+- response
+- validationSteps (array)
+- automationScript (Karate DSL or RestAssured only)
+
+NO comments. NO text outside JSON.
+
+Story:
+{story}
+"""

@@ -1,0 +1,14 @@
+EPICS_PROMPT = """
+Break down the following requirement into epics strictly in JSON format.
+JSON must be an array of objects.
+
+Each epic must contain:
+- name
+- description
+- acceptanceCriteria (array)
+
+NO extra text. NO comments. ONLY pure JSON array.
+
+Requirement:
+{requirement}
+"""
