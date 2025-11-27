@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from config.db import Base, engine
-from routes import upload, generateStories, generateEpics, generateQA, listFiles
+from routes import upload, generateStories, generateEpics, generateQA, listFiles,generateTestPlan
 
 Base.metadata.create_all(bind=engine)
 
@@ -11,3 +11,4 @@ app.include_router(generateStories.router)
 app.include_router(generateEpics.router)
 app.include_router(generateQA.router)
 app.include_router(listFiles.router)
+app.include_router(generateTestPlan.router)
