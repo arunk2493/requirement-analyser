@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException
 from models.file_model import Story, QA
 from config.gemini import generate_json
 from config.db import get_db
-from prompts.qa_prompt import QA_PROMPT
 
 router = APIRouter()
 
@@ -15,6 +14,18 @@ def generate_qa(story_id: int):
 
         prompt = f"""
 Generate QA test cases for the following user story strictly in JSON.
+Generate API TEST CASES and AUTOMATION SCRIPTS strictly in JSON array format.
+
+Each object in the array must include:
+- title
+- apiEndpoint
+- method
+- request
+- response
+- validationSteps (array)
+- automationScript (Karate DSL or RestAssured only)
+
+NO comments. NO text outside JSON.
 Each test should include:
 - title
 - steps
