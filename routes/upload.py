@@ -1,7 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from models.file_model import Upload
 from config.db import get_db
-import uuid, json
 from PyPDF2 import PdfReader
 from docx import Document
 
@@ -31,6 +30,8 @@ async def upload_file(file: UploadFile = File(...)):
         with get_db() as db:
             upload_obj = Upload(filename=file.filename, content=content_json)
             db.add(upload_obj)
+            db.commit()      # <-- commit transaction
+            db.refresh(upload_obj)  # <-- refresh to get the ID
 
         return {"message": "File uploaded successfully", "upload_id": upload_obj.id}
 

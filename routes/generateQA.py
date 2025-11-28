@@ -2,8 +2,40 @@ from fastapi import APIRouter, HTTPException
 from models.file_model import Story, QA
 from config.gemini import generate_json
 from config.db import get_db
+import json
+import re
 
 router = APIRouter()
+
+def safe_parse_json(output):
+    """
+    Ensures the model output is a Python list.
+    Cleans strings from backticks, single quotes, trailing commas if needed.
+    """
+    if isinstance(output, list):
+        return output  # Already a list, nothing to do
+
+    if not isinstance(output, str):
+        raise ValueError(f"Unexpected type from model: {type(output)}")
+
+    text = output.strip()
+
+    # Remove code block backticks if present
+    import re
+    text = re.sub(r"^```json|```$", "", text, flags=re.IGNORECASE)
+
+    # Replace single quotes with double quotes (common GPT issue)
+    text = text.replace("'", '"')
+
+    # Remove trailing commas before closing brackets
+    text = re.sub(r",(\s*[}\]])", r"\1", text)
+
+    import json
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON from model: {str(e)}\nRaw output: {text}")
+
 
 @router.post("/generate-qa/{story_id}")
 def generate_qa(story_id: int):
@@ -14,8 +46,6 @@ def generate_qa(story_id: int):
 
         prompt = f"""
 Generate QA test cases for the following user story strictly in JSON.
-Generate API TEST CASES and AUTOMATION SCRIPTS strictly in JSON array format.
-
 Each object in the array must include:
 - title
 - apiEndpoint
@@ -23,30 +53,19 @@ Each object in the array must include:
 - request
 - response
 - validationSteps (array)
-- automationScript (Karate DSL or RestAssured only)
+- automationScript (Karate DSL or RestAssured)
 
 NO comments. NO text outside JSON.
-Each test should include:
-- title
-- steps
-- expectedOutcome
 
-Return JSON:
-[
-  {{
-    "title": "",
-    "steps": [],
-    "expectedOutcome": ""
-  }}
-]
 User Story:
 {story_obj.content}
 """
 
         try:
-            qa_list = generate_json(prompt)
+            raw_output = generate_json(prompt)
+            qa_list = safe_parse_json(raw_output)
         except ValueError as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=f"Could not extract valid JSON from model output: {str(e)}")
 
         if not isinstance(qa_list, list):
             raise HTTPException(status_code=400, detail="Expected an array of QA objects")
@@ -57,7 +76,7 @@ User Story:
             qa_obj = QA(
                 story_id=story_id,
                 type="qa",
-                content=qa_item              # <-- FIXED HERE
+                content=qa_item
             )
             db.add(qa_obj)
             db.flush()
@@ -66,6 +85,8 @@ User Story:
                 "id": qa_obj.id,
                 "content": qa_item
             })
+
+        db.commit()
 
         return {
             "message": "QA generated",

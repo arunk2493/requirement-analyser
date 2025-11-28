@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP
+from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from config.db import Base
@@ -8,6 +8,7 @@ class Upload(Base):
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String(255))
     content = Column(JSONB)  # store requirement content as JSON
+    confluence_page_id = Column(String(50), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 class Epic(Base):
@@ -16,6 +17,7 @@ class Epic(Base):
     upload_id = Column(Integer, ForeignKey("uploads.id", ondelete="CASCADE"))
     name = Column(String(255))
     content = Column(JSONB)  # epic details as JSON
+    confluence_page_id = Column(String(255), nullable=True)  # Confluence page ID
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 class Story(Base):
@@ -29,9 +31,11 @@ class Story(Base):
 class QA(Base):
     __tablename__ = "qa"
     id = Column(Integer, primary_key=True, index=True)
-    story_id = Column(Integer, ForeignKey("stories.id", ondelete="CASCADE"))
+    story_id = Column(Integer, ForeignKey("stories.id", ondelete="CASCADE"), nullable=True)
+    epic_id = Column(Integer, ForeignKey("epics.id", ondelete="CASCADE"), nullable=True)
     type = Column(String(50))  # test_plan, api_test, automation_script
     content = Column(JSONB)
+    confluence_page_id = Column(String(255), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 class AggregatedUpload(Base):

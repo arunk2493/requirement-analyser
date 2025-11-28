@@ -12,3 +12,4 @@ PyPDF2
 python-docx
 python-multipart
 fpdf2
+atlassian-python-api
