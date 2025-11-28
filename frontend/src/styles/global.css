@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.menu-item {
+  @apply block mb-3 p-2 rounded hover:bg-gray-700;
+}
