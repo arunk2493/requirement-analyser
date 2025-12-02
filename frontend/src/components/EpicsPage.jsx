@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchAllEpics } from "../api/api";
-import { FaBook, FaSpinner, FaExternalLinkAlt, FaSync, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaBook, FaSpinner, FaExternalLinkAlt, FaSync, FaChevronLeft, FaChevronRight, FaSortUp, FaSortDown } from "react-icons/fa";
 
 export default function EpicsPage() {
   const [epics, setEpics] = useState([]);
@@ -10,12 +10,14 @@ export default function EpicsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalEpics, setTotalEpics] = useState(0);
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortOrder, setSortOrder] = useState("desc");
   const pageSize = 10;
 
   const loadEpics = async (page = 1) => {
     try {
       setRefreshing(true);
-      const response = await fetchAllEpics(page, pageSize);
+      const response = await fetchAllEpics(page, pageSize, sortBy, sortOrder);
       setEpics(response.data.epics || []);
       setTotalEpics(response.data.total_epics || 0);
       setTotalPages(response.data.total_pages || 1);
@@ -38,7 +40,7 @@ export default function EpicsPage() {
       }
     };
     initialLoad();
-  }, [currentPage]);
+  }, [currentPage, sortBy, sortOrder]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
@@ -99,9 +101,35 @@ export default function EpicsPage() {
             <table className="w-full border-collapse bg-white dark:bg-gray-800">
               <thead>
                 <tr className="bg-purple-100 dark:bg-purple-900 border-b border-gray-300 dark:border-gray-700">
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">ID</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                    <button className="flex items-center gap-2" onClick={() => {
+                      if (sortBy === 'id') {
+                        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('id');
+                        setSortOrder('desc');
+                      }
+                      setCurrentPage(1);
+                    }}>
+                      ID
+                      {sortBy === 'id' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
+                    </button>
+                  </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Epic Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Created</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                    <button className="flex items-center gap-2" onClick={() => {
+                      if (sortBy === 'created_at') {
+                        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('created_at');
+                        setSortOrder('desc');
+                      }
+                      setCurrentPage(1);
+                    }}>
+                      Created
+                      {sortBy === 'created_at' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
+                    </button>
+                  </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Confluence</th>
                 </tr>
               </thead>

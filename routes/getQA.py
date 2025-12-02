@@ -64,13 +64,30 @@ def get_qa_details(story_id: int, qa_id: int):
 
 
 @router.get("/qa")
-def get_all_qa(page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=100)):
-    """Get all QA test cases across all stories (paginated)."""
+def get_all_qa(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
+):
+    """Get all QA test cases across all stories (paginated). Supports sorting by `id` or `created_at`."""
     with get_db() as db:
         query = db.query(QA).filter(QA.type == "qa")
         total_count = query.count()
         offset = (page - 1) * page_size
-        qa_tests = query.order_by(QA.created_at.desc()).offset(offset).limit(page_size).all()
+        sort_by = (sort_by or "created_at").lower()
+        sort_order = (sort_order or "desc").lower()
+        if sort_by == "id":
+            col = QA.id
+        else:
+            col = QA.created_at
+
+        if sort_order == "asc":
+            order_clause = col.asc()
+        else:
+            order_clause = col.desc()
+
+        qa_tests = query.order_by(order_clause).offset(offset).limit(page_size).all()
 
         qa_list = []
         for qa in qa_tests:

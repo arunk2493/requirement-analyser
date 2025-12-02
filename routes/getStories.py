@@ -62,12 +62,29 @@ def get_story_details(epic_id: int, story_id: int):
 
 
 @router.get("/stories")
-def get_all_stories(page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=100)):
-    """Get all stories across all epics (paginated)."""
+def get_all_stories(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
+):
+    """Get all stories across all epics (paginated). Supports sorting by `id` or `created_at`."""
     with get_db() as db:
         total_count = db.query(Story).count()
         offset = (page - 1) * page_size
-        stories = db.query(Story).order_by(Story.created_at.desc()).offset(offset).limit(page_size).all()
+        sort_by = (sort_by or "created_at").lower()
+        sort_order = (sort_order or "desc").lower()
+        if sort_by == "id":
+            col = Story.id
+        else:
+            col = Story.created_at
+
+        if sort_order == "asc":
+            order_clause = col.asc()
+        else:
+            order_clause = col.desc()
+
+        stories = db.query(Story).order_by(order_clause).offset(offset).limit(page_size).all()
 
         story_list = []
         for story in stories:

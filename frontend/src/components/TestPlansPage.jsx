@@ -1,18 +1,26 @@
 import { useEffect, useState } from "react";
 import { fetchAllTestPlans } from "../api/api";
-import { FaFlask, FaSpinner, FaExternalLinkAlt, FaSync } from "react-icons/fa";
+import { FaFlask, FaSpinner, FaExternalLinkAlt, FaSync, FaChevronLeft, FaChevronRight, FaSortUp, FaSortDown } from "react-icons/fa";
 
 export default function TestPlansPage() {
   const [testplans, setTestPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTestPlans, setTotalTestPlans] = useState(0);
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const pageSize = 10;
 
-  const loadTestPlans = async () => {
+  const loadTestPlans = async (page = 1) => {
     try {
       setRefreshing(true);
-      const response = await fetchAllTestPlans();
+      const response = await fetchAllTestPlans(page, pageSize, sortBy, sortOrder);
       setTestPlans(response.data.test_plans || []);
+      setTotalTestPlans(response.data.total_test_plans || 0);
+      setTotalPages(response.data.total_pages || 1);
       setError(null);
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to load test plans");
@@ -26,13 +34,13 @@ export default function TestPlansPage() {
     const initialLoad = async () => {
       try {
         setLoading(true);
-        await loadTestPlans();
+        await loadTestPlans(currentPage);
       } finally {
         setLoading(false);
       }
     };
     initialLoad();
-  }, []);
+  }, [currentPage, sortBy, sortOrder]);
 
   const toggleExpanded = (planId) => {
     setExpandedRows(prev => ({
@@ -101,15 +109,41 @@ export default function TestPlansPage() {
       {!loading && testplans.length > 0 && (
         <div className="space-y-4">
           <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Total Test Plans: <span className="font-bold text-gray-900 dark:text-white">{testplans.length}</span>
+            Total Test Plans: <span className="font-bold text-gray-900 dark:text-white">{totalTestPlans}</span>
           </div>
           <div className="overflow-x-auto rounded-lg shadow">
             <table className="w-full border-collapse bg-white dark:bg-gray-800">
               <thead>
                 <tr className="bg-orange-100 dark:bg-orange-900 border-b border-gray-300 dark:border-gray-700">
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">ID</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                    <button className="flex items-center gap-2" onClick={() => {
+                      if (sortBy === 'id') {
+                        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('id');
+                        setSortOrder('desc');
+                      }
+                      setCurrentPage(1);
+                    }}>
+                      ID
+                      {sortBy === 'id' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
+                    </button>
+                  </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Title</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Created</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                    <button className="flex items-center gap-2" onClick={() => {
+                      if (sortBy === 'created_at') {
+                        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('created_at');
+                        setSortOrder('desc');
+                      }
+                      setCurrentPage(1);
+                    }}>
+                      Created
+                      {sortBy === 'created_at' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
+                    </button>
+                  </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Confluence</th>
                 </tr>
               </thead>
@@ -141,6 +175,30 @@ export default function TestPlansPage() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                title="Previous page"
+              >
+                <FaChevronLeft className="text-sm text-gray-700 dark:text-gray-300" />
+              </button>
+
+              <span className="text-xs text-gray-600 dark:text-gray-400">Page {currentPage} of {totalPages}</span>
+
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                title="Next page"
+              >
+                <FaChevronRight className="text-sm text-gray-700 dark:text-gray-300" />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

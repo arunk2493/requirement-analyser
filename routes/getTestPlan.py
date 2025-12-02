@@ -88,13 +88,30 @@ def get_testplan_details(epic_id: int, testplan_id: int):
 
 
 @router.get("/testplans")
-def get_all_testplans(page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=100)):
-    """Get all test plans across all epics (paginated)."""
+def get_all_testplans(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
+):
+    """Get all test plans across all epics (paginated). Supports sorting by `id` or `created_at`."""
     with get_db() as db:
         base_query = db.query(QA).filter(QA.type == "test_plan")
         total_count = base_query.count()
         offset = (page - 1) * page_size
-        testplans = base_query.order_by(QA.created_at.desc()).offset(offset).limit(page_size).all()
+        sort_by = (sort_by or "created_at").lower()
+        sort_order = (sort_order or "desc").lower()
+        if sort_by == "id":
+            col = QA.id
+        else:
+            col = QA.created_at
+
+        if sort_order == "asc":
+            order_clause = col.asc()
+        else:
+            order_clause = col.desc()
+
+        testplans = base_query.order_by(order_clause).offset(offset).limit(page_size).all()
 
         testplan_list = []
         for testplan in testplans:

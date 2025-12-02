@@ -57,12 +57,30 @@ def get_epics(upload_id: int):
 
 
 @router.get("/epics")
-def get_all_epics(page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=100)):
-    """Get all epics across all uploads (paginated)."""
+def get_all_epics(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
+):
+    """Get all epics across all uploads (paginated). Supports sorting by `id` or `created_at`."""
     with get_db() as db:
         total_count = db.query(Epic).count()
         offset = (page - 1) * page_size
-        epics = db.query(Epic).order_by(Epic.created_at.desc()).offset(offset).limit(page_size).all()
+        # choose column to sort by
+        sort_by = (sort_by or "created_at").lower()
+        sort_order = (sort_order or "desc").lower()
+        if sort_by == "id":
+            col = Epic.id
+        else:
+            col = Epic.created_at
+
+        if sort_order == "asc":
+            order_clause = col.asc()
+        else:
+            order_clause = col.desc()
+
+        epics = db.query(Epic).order_by(order_clause).offset(offset).limit(page_size).all()
 
         epic_list = []
         for epic in epics:
