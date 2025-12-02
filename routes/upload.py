@@ -1,10 +1,28 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from models.file_model import Upload
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from models.file_model import Upload, Epic
 from config.db import get_db
+from config.config import CONFLUENCE_URL
 from PyPDF2 import PdfReader
 from docx import Document
+from typing import Optional
 
 router = APIRouter()
+
+def get_confluence_page_url(page_id: str) -> Optional[str]:
+    """Generate Confluence page URL from page ID"""
+    if not page_id:
+        return None
+    try:
+        base = (CONFLUENCE_URL or "").strip()
+        base = base.strip("'\"")
+        base = base.rstrip('/')
+    except Exception:
+        base = CONFLUENCE_URL
+
+    pid = str(page_id).strip()
+    pid = pid.strip("'\"")
+
+    return f"{base}/pages/viewpage.action?pageId={pid}"
 
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -35,6 +53,50 @@ async def upload_file(file: UploadFile = File(...)):
 
         return {"message": "File uploaded successfully", "upload_id": upload_obj.id}
 
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/uploads")
+def get_all_uploads(page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=100)):
+    """Get all uploaded files with pagination. Returns file info with first epic's Confluence link if available."""
+    try:
+        with get_db() as db:
+            # Get total count
+            total_count = db.query(Upload).count()
+            
+            # Calculate offset
+            offset = (page - 1) * page_size
+            
+            # Get paginated results
+            uploads = db.query(Upload).order_by(Upload.created_at.desc()).offset(offset).limit(page_size).all()
+            
+            upload_list = []
+            for upload in uploads:
+                # Get the first epic for this upload to get Confluence link
+                first_epic = db.query(Epic).filter(Epic.upload_id == upload.id).first()
+                
+                upload_data = {
+                    "id": upload.id,
+                    "filename": upload.filename,
+                    "created_at": upload.created_at,
+                    "confluence_page_url": get_confluence_page_url(first_epic.confluence_page_id) if first_epic else None
+                }
+                upload_list.append(upload_data)
+            
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size
+            
+            return {
+                "message": "Uploads retrieved successfully",
+                "total_uploads": total_count,
+                "current_page": page,
+                "page_size": page_size,
+                "total_pages": total_pages,
+                "uploads": upload_list
+            }
     except Exception as e:
         import traceback
         traceback.print_exc()

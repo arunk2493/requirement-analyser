@@ -1,10 +1,10 @@
 // src/api/api.js
 import axios from "axios";
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "http://localhost:8000";
 
 export const api = axios.create({
-  baseURL: "http://localhost:5000",
+  baseURL: API_BASE,
 });
 
 export const uploadFile = (file) => {
@@ -15,7 +15,39 @@ export const uploadFile = (file) => {
   });
 };
 
-export const fetchDashboard = () => axios.get(`${API_BASE}/api/data`);
-export const fetchEpics = () => axios.get(`${API_BASE}/api/epics`);
-export const fetchStories = () => axios.get(`${API_BASE}/api/stories`);
-export const fetchQA = () => axios.get(`${API_BASE}/api/qa`);
+// GET Endpoints for hierarchical data
+export const fetchEpicsByUpload = (uploadId) => 
+  axios.get(`${API_BASE}/epics/${uploadId}`);
+
+export const fetchAllEpics = (page = 1, page_size = 10) =>
+  axios.get(`${API_BASE}/epics`, { params: { page, page_size } });
+
+export const fetchEpicDetails = (uploadId, epicId) => 
+  axios.get(`${API_BASE}/epics/${uploadId}/${epicId}`);
+
+export const fetchStoriesByEpic = (epicId) => 
+  axios.get(`${API_BASE}/stories/${epicId}`);
+
+export const fetchAllStories = (page = 1, page_size = 10) =>
+  axios.get(`${API_BASE}/stories`, { params: { page, page_size } });
+
+export const fetchStoryDetails = (epicId, storyId) => 
+  axios.get(`${API_BASE}/stories/${epicId}/${storyId}`);
+
+export const fetchQAByStory = (storyId) => 
+  axios.get(`${API_BASE}/qa/${storyId}`);
+
+export const fetchAllQA = (page = 1, page_size = 10) =>
+  axios.get(`${API_BASE}/qa`, { params: { page, page_size } });
+
+export const fetchQADetails = (storyId, qaId) => 
+  axios.get(`${API_BASE}/qa/${storyId}/${qaId}`);
+
+export const fetchTestPlansByEpic = (epicId) => 
+  axios.get(`${API_BASE}/testplans/${epicId}`);
+
+export const fetchAllTestPlans = (page = 1, page_size = 10) =>
+  axios.get(`${API_BASE}/testplans`, { params: { page, page_size } });
+
+export const fetchTestPlanDetails = (epicId, testplanId) => 
+  axios.get(`${API_BASE}/testplans/${epicId}/${testplanId}`);

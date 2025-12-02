@@ -1,33 +1,56 @@
 import { NavLink } from "react-router-dom";
-//import ThemeToggle from "./ThemeToggle";
+import {
+  FaHome,
+  FaUpload,
+  FaBook,
+  FaList,
+  FaFlask,
+  FaCheckSquare,
+} from "react-icons/fa";
 
-export default function Sidebar() {
+export default function Sidebar({ darkMode, setDarkMode }) {
   const links = [
-    { path: "/", label: "Dashboard" },
-    { path: "/upload", label: "Upload" },
-    { path: "/epics", label: "Epics" },
-    { path: "/stories", label: "Stories" },
-    { path: "/qa", label: "QA" },
+    { path: "/", label: "Dashboard", icon: <FaHome /> },
+    { path: "/upload", label: "Upload", icon: <FaUpload /> },
+    { path: "/epics", label: "Epics", icon: <FaBook /> },
+    { path: "/stories", label: "Stories", icon: <FaList /> },
+    { path: "/qa", label: "QA", icon: <FaCheckSquare /> },
+    { path: "/testplans", label: "Test Plans", icon: <FaFlask /> },
   ];
 
   return (
-    <div className="w-60 bg-gray-100 dark:bg-gray-900 p-4 flex flex-col">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Analyzer</h1>
-      <nav className="flex-1 space-y-2">
+    <div className="w-72 bg-gradient-to-b from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black p-6 flex flex-col shadow-2xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+          <span className="text-4xl">🚀</span> Analyzer
+        </h1>
+        <p className="text-gray-400 text-sm mt-1">Requirement Analysis Tool</p>
+      </div>
+
+      <nav className="flex-1 space-y-1">
         {links.map((link) => (
           <NavLink
             key={link.path}
             to={link.path}
             className={({ isActive }) =>
-              `block px-4 py-2 rounded ${
-                isActive ? "bg-blue-500 text-white" : "text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-700"
+              `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+                isActive
+                  ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg"
+                  : "text-gray-300 hover:bg-gray-700 dark:hover:bg-gray-800"
               }`
             }
           >
-            {link.label}
+            <span className="text-lg">{link.icon}</span>
+            <span className="font-medium">{link.label}</span>
           </NavLink>
         ))}
       </nav>
+
+      <div className="border-t border-gray-700 pt-4 mt-4">
+        <p className="text-xs text-gray-500 text-center">
+          Version 1.0 • AI-Powered Requirements
+        </p>
+      </div>
     </div>
   );
 }
