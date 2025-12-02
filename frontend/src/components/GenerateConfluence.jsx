@@ -7,19 +7,35 @@ import {
   fetchAllEpics,
   fetchAllStories,
   fetchAllQA,
-  fetchAllTestPlans,
+  fetchAllTestPlans
 } from "../api/api";
-import { FaFileAlt, FaSpinner, FaBolt } from "react-icons/fa";
+
+import { FaFileAlt, FaSpinner } from "react-icons/fa";
 
 export default function GenerateConfluence() {
   const [uploads, setUploads] = useState([]);
-  const [selectedUpload, setSelectedUpload] = useState(null);
-  const [selectedEpic, setSelectedEpic] = useState(null);
-  const [selectedStory, setSelectedStory] = useState(null);
+
+  // Text inputs
+  const [uploadIdInput, setUploadIdInput] = useState("");
+  const [epicIdInput, setEpicIdInput] = useState("");
+  const [storyIdInput, setStoryIdInput] = useState("");
+
+  // Individual button loading states
+  const [loadingEpics, setLoadingEpics] = useState(false);
+  const [loadingStories, setLoadingStories] = useState(false);
+  const [loadingQA, setLoadingQA] = useState(false);
 
   const [loadingUploads, setLoadingUploads] = useState(false);
-  const [busy, setBusy] = useState(false);
 
+  // Notification banner
+  const [notification, setNotification] = useState({ type: "", message: "" });
+
+  const showNotification = (type, message) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification({ type: "", message: "" }), 4000);
+  };
+
+  // Recent lists
   const [recentEpics, setRecentEpics] = useState([]);
   const [recentStories, setRecentStories] = useState([]);
   const [recentQA, setRecentQA] = useState([]);
@@ -32,10 +48,6 @@ export default function GenerateConfluence() {
       setLoadingUploads(true);
       const res = await fetchUploads();
       setUploads(res.data.uploads || []);
-      // preselect first upload if available
-      if ((res.data.uploads || []).length > 0 && !selectedUpload) {
-        setSelectedUpload(res.data.uploads[0].upload_id);
-      }
     } catch (e) {
       console.error("Could not load uploads", e);
     } finally {
@@ -66,150 +78,166 @@ export default function GenerateConfluence() {
     loadRecentLists();
   }, []);
 
-  // helper to refresh everything after create
   const refreshAll = async () => {
     await Promise.all([loadUploads(), loadRecentLists()]);
   };
 
+  // Generate Epics
   const onGenerateEpics = async () => {
-    if (!selectedUpload) return;
+    if (!uploadIdInput) return showNotification("error", "Upload ID is required");
+
     try {
-      setBusy(true);
-      await generateEpics(selectedUpload);
+      setLoadingEpics(true);
+      await generateEpics(Number(uploadIdInput));
+      showNotification("success", "Epics generated successfully");
       await refreshAll();
     } catch (e) {
-      console.error("generate epics failed", e.response || e);
-      alert("Failed to generate epics: " + (e.response?.data?.detail || e.message || e));
+      showNotification("error", e.response?.data?.detail || "Failed to generate epics");
     } finally {
-      setBusy(false);
+      setLoadingEpics(false);
     }
   };
 
+  // Generate Stories
   const onGenerateStories = async () => {
-    if (!selectedEpic) return;
+    if (!epicIdInput) return showNotification("error", "Epic ID is required");
+
     try {
-      setBusy(true);
-      await generateStories(selectedEpic);
+      setLoadingStories(true);
+      await generateStories(Number(epicIdInput));
+      showNotification("success", "Stories generated successfully");
       await refreshAll();
     } catch (e) {
-      console.error("generate stories failed", e.response || e);
-      alert("Failed to generate stories: " + (e.response?.data?.detail || e.message || e));
+      showNotification("error", e.response?.data?.detail || "Failed to generate stories");
     } finally {
-      setBusy(false);
+      setLoadingStories(false);
     }
   };
 
+  // Generate QA
   const onGenerateQA = async () => {
-    if (!selectedStory) return;
+    if (!storyIdInput) return showNotification("error", "Story ID is required");
+
     try {
-      setBusy(true);
-      await generateQA(selectedStory);
+      setLoadingQA(true);
+      await generateQA(Number(storyIdInput));
+      showNotification("success", "QA generated successfully");
       await refreshAll();
     } catch (e) {
-      console.error("generate qa failed", e.response || e);
-      alert("Failed to generate QA: " + (e.response?.data?.detail || e.message || e));
+      showNotification("error", e.response?.data?.detail || "Failed to generate QA");
     } finally {
-      setBusy(false);
+      setLoadingQA(false);
     }
   };
-
-  // compute list of epics/stories for selects from uploads
-  const allEpics = [];
-  uploads.forEach((u) => {
-    (u.epics || []).forEach((e) => allEpics.push({ upload_id: u.upload_id, epic_id: e.epic_id, name: e.name }));
-  });
-
-  const allStories = [];
-  uploads.forEach((u) => {
-    (u.epics || []).forEach((e) => {
-      (e.stories || []).forEach((s) => allStories.push({ epic_id: e.epic_id, story_id: s.story_id, name: s.name }));
-    });
-  });
 
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <FaFileAlt className="text-4xl text-indigo-600" />
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Generate Confluence Documents</h1>
+    <div className="min-h-screen p-8 bg-gray-100">
+
+      {/* Notification Banner */}
+      {notification.message && (
+        <div
+          className={`p-3 mb-4 rounded text-white ${
+            notification.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {notification.message}
         </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">Generate Epics, Stories, and QA and view recent items</div>
+      )}
+
+      <div className="mb-8 flex items-center gap-3">
+        <FaFileAlt className="text-4xl text-indigo-600" />
+        <h1 className="text-3xl font-bold">Generate Confluence Documents</h1>
       </div>
 
       <div className="grid grid-cols-12 gap-6">
-        {/* Left: controls */}
-        <div className="col-span-5 bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
+        {/* LEFT PANEL — INPUTS */}
+        <div className="col-span-5 bg-white rounded-lg p-6 shadow">
           <h2 className="text-lg font-semibold mb-4">Generate Content</h2>
 
-          <div className="mb-4">
-            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-2">Select Upload (for Epics)</label>
-            {loadingUploads ? (
-              <div className="flex items-center gap-2 text-sm"><FaSpinner className="animate-spin"/> Loading uploads...</div>
+          {/* Upload ID */}
+          <label className="block mb-1 text-sm">Upload ID (for Epics)</label>
+          <input
+            type="text"
+            value={uploadIdInput}
+            onChange={(e) => setUploadIdInput(e.target.value)}
+            placeholder="Enter Upload ID"
+            className="w-full p-2 border rounded"
+          />
+          <button
+            disabled={loadingEpics}
+            onClick={onGenerateEpics}
+            className="mt-3 w-full px-4 py-2 bg-indigo-600 text-white rounded disabled:opacity-50"
+          >
+            {loadingEpics ? (
+              <><FaSpinner className="inline animate-spin mr-2" />Generating...</>
             ) : (
-              <select value={selectedUpload || ""} onChange={(e) => setSelectedUpload(Number(e.target.value) || null)} className="w-full p-2 border rounded">
-                <option value="">-- choose upload --</option>
-                {uploads.map((u) => (
-                  <option key={u.upload_id} value={u.upload_id}>{u.name || `Upload ${u.upload_id}`}</option>
-                ))}
-              </select>
+              "Generate Epics"
             )}
-            <div className="mt-3">
-              <button disabled={!selectedUpload || busy} onClick={onGenerateEpics} className="px-4 py-2 bg-indigo-600 text-white rounded disabled:opacity-50">
-                {busy ? <><FaSpinner className="inline animate-spin mr-2"/>Generating...</> : <>Generate Epics</>}
-              </button>
-            </div>
-          </div>
+          </button>
 
           <hr className="my-4" />
 
-          <div className="mb-4">
-            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-2">Select Epic (for Stories)</label>
-            <select value={selectedEpic || ""} onChange={(e) => setSelectedEpic(Number(e.target.value) || null)} className="w-full p-2 border rounded">
-              <option value="">-- choose epic --</option>
-              {allEpics.map((e) => (
-                <option key={e.epic_id} value={e.epic_id}>{e.name || `Epic ${e.epic_id}`}</option>
-              ))}
-            </select>
-            <div className="mt-3">
-              <button disabled={!selectedEpic || busy} onClick={onGenerateStories} className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50">
-                {busy ? <><FaSpinner className="inline animate-spin mr-2"/>Generating...</> : <>Generate Stories</>}
-              </button>
-            </div>
-          </div>
+          {/* Epic ID */}
+          <label className="block mb-1 text-sm">Epic ID (for Stories)</label>
+          <input
+            type="text"
+            value={epicIdInput}
+            onChange={(e) => setEpicIdInput(e.target.value)}
+            placeholder="Enter Epic ID"
+            className="w-full p-2 border rounded"
+          />
+          <button
+            disabled={loadingStories}
+            onClick={onGenerateStories}
+            className="mt-3 w-full px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50"
+          >
+            {loadingStories ? (
+              <><FaSpinner className="inline animate-spin mr-2" />Generating...</>
+            ) : (
+              "Generate Stories"
+            )}
+          </button>
 
           <hr className="my-4" />
 
-          <div>
-            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-2">Select Story (for QA)</label>
-            <select value={selectedStory || ""} onChange={(e) => setSelectedStory(Number(e.target.value) || null)} className="w-full p-2 border rounded">
-              <option value="">-- choose story --</option>
-              {allStories.map((s) => (
-                <option key={s.story_id} value={s.story_id}>{s.name || `Story ${s.story_id}`}</option>
-              ))}
-            </select>
-            <div className="mt-3">
-              <button disabled={!selectedStory || busy} onClick={onGenerateQA} className="px-4 py-2 bg-yellow-600 text-white rounded disabled:opacity-50">
-                {busy ? <><FaSpinner className="inline animate-spin mr-2"/>Generating...</> : <>Generate QA</>}
-              </button>
-            </div>
-          </div>
+          {/* Story ID */}
+          <label className="block mb-1 text-sm">Story ID (for QA)</label>
+          <input
+            type="text"
+            value={storyIdInput}
+            onChange={(e) => setStoryIdInput(e.target.value)}
+            placeholder="Enter Story ID"
+            className="w-full p-2 border rounded"
+          />
+          <button
+            disabled={loadingQA}
+            onClick={onGenerateQA}
+            className="mt-3 w-full px-4 py-2 bg-yellow-600 text-white rounded disabled:opacity-50"
+          >
+            {loadingQA ? (
+              <><FaSpinner className="inline animate-spin mr-2" />Generating...</>
+            ) : (
+              "Generate QA"
+            )}
+          </button>
         </div>
 
-        {/* Right: recent items */}
+        {/* RIGHT PANEL — RECENT ITEMS */}
         <div className="col-span-7 space-y-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+
+          {/* Recent Epics */}
+          <div className="bg-white rounded-lg p-4 shadow">
             <h3 className="font-semibold mb-3">Recent Epics</h3>
-            {recentEpics.length === 0 ? <div className="text-sm text-gray-500">No epics yet</div> : (
+            {recentEpics.length === 0 ? (
+              <div>No epics yet</div>
+            ) : (
               <ul className="divide-y">
                 {recentEpics.map((e) => (
-                  <li key={e.id} className="py-2 flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">{e.name || `Epic ${e.id}`}</div>
-                      <div className="text-sm text-gray-500">Created: {new Date(e.created_at).toLocaleString()}</div>
-                    </div>
-                    <div>
-                      {e.confluence_page_url ? <a className="text-indigo-600" target="_blank" rel="noreferrer" href={e.confluence_page_url}>View</a> : null}
-                    </div>
+                  <li key={e.id} className="py-2 flex justify-between">
+                    <div className="font-medium">{e.name}</div>
+                    {e.confluence_page_url && (
+                      <a className="text-indigo-600" target="_blank" href={e.confluence_page_url}>View</a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -217,53 +245,60 @@ export default function GenerateConfluence() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+
+            {/* Recent Stories */}
+            <div className="bg-white rounded-lg p-4 shadow">
               <h3 className="font-semibold mb-3">Recent Stories</h3>
-              {recentStories.length === 0 ? <div className="text-sm text-gray-500">No stories yet</div> : (
+              {recentStories.length === 0 ? (
+                <div>No stories yet</div>
+              ) : (
                 <ul className="divide-y">
                   {recentStories.map((s) => (
-                    <li key={s.id} className="py-2">
-                      <div className="font-medium">{s.name || `Story ${s.id}`}</div>
-                      <div className="text-sm text-gray-500">Created: {new Date(s.created_at).toLocaleString()}</div>
+                    <li key={s.id} className="py-2 font-medium">
+                      {s.name}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+            {/* Recent QA */}
+            <div className="bg-white rounded-lg p-4 shadow">
               <h3 className="font-semibold mb-3">Recent QA</h3>
-              {recentQA.length === 0 ? <div className="text-sm text-gray-500">No QA yet</div> : (
+              {recentQA.length === 0 ? (
+                <div>No QA yet</div>
+              ) : (
                 <ul className="divide-y">
                   {recentQA.map((q) => (
-                    <li key={q.id} className="py-2">
-                      <div className="font-medium">QA #{q.id}</div>
-                      <div className="text-sm text-gray-500">Created: {new Date(q.created_at).toLocaleString()}</div>
+                    <li key={q.id} className="py-2 font-medium">
+                      QA #{q.id}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
+
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+          {/* Recent Test Plans */}
+          <div className="bg-white rounded-lg p-4 shadow">
             <h3 className="font-semibold mb-3">Recent Test Plans</h3>
-            {recentTestPlans.length === 0 ? <div className="text-sm text-gray-500">No test plans yet</div> : (
+            {recentTestPlans.length === 0 ? (
+              <div>No test plans yet</div>
+            ) : (
               <ul className="divide-y">
                 {recentTestPlans.map((t) => (
-                  <li key={t.id} className="py-2 flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">{t.title || `Test Plan ${t.id}`}</div>
-                      <div className="text-sm text-gray-500">Created: {new Date(t.created_at).toLocaleString()}</div>
-                    </div>
-                    <div>
-                      {t.confluence_page_url ? <a className="text-indigo-600" target="_blank" rel="noreferrer" href={t.confluence_page_url}>View</a> : null}
-                    </div>
+                  <li key={t.id} className="py-2 flex justify-between">
+                    <div className="font-medium">{t.title}</div>
+                    {t.confluence_page_url && (
+                      <a className="text-indigo-600" target="_blank" href={t.confluence_page_url}>View</a>
+                    )}
                   </li>
                 ))}
               </ul>
             )}
           </div>
+
         </div>
       </div>
     </div>
