@@ -3,19 +3,18 @@ from models.file_model import Upload, Epic, QA
 from config.gemini import generate_json
 from config.db import get_db
 from atlassian import Confluence
+from config.config import CONFLUENCE_URL, CONFLUENCE_USERNAME, CONFLUENCE_PASSWORD, CONFLUENCE_SPACE_KEY, CONFLUENCE_ROOT_FOLDER_ID
 import datetime
 
 router = APIRouter()
+print("Confluence URL from config:", CONFLUENCE_URL)
+print("Confluence Username from config:", CONFLUENCE_USERNAME)
+print("Confluence Password from config:", CONFLUENCE_PASSWORD)
+print("Confluence Space Key from config:", CONFLUENCE_SPACE_KEY)
+print("Confluence Root Folder ID from config:", CONFLUENCE_ROOT_FOLDER_ID)
+print("Initializing Confluence clientssss.............")
 
 # Initialize Confluence client
-confluence = Confluence(
-    url='',
-    username='',
-    password=''
-)
-
-SPACE_KEY = ""
-ROOT_FOLDER_ID = ""
 
 
 def add_timestamp(name: str):
@@ -55,8 +54,9 @@ def create_epic_page(epic_name: str, content: dict, parent_id: str):
 
 
 def create_testplan_page(title: str, content: dict, parent_id: str):
-    title_ts = add_timestamp(title)
-    page_content = f"<h2>{title}</h2>"
+    test_plan_title = "Test Plan: " + title
+    title_ts = add_timestamp(test_plan_title)
+    page_content = f"<h2>{test_plan_title}</h2>"
     for k, v in content.items():
         if isinstance(v, list):
             page_content += f"<h3>{k}</h3><ul>"
