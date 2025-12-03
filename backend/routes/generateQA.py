@@ -1,7 +1,11 @@
-from fastapi import APIRouter, HTTPException
-from models.file_model import Story, QA
+from fastapi import APIRouter, HTTPException, Depends
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from models.file_model import Story, QA, User, Epic, Upload
 from config.gemini import generate_json
 from config.db import get_db
+from config.dependencies import get_current_user_with_db
 from rag.vectorstore import VectorStore
 import json
 import re
@@ -41,9 +45,16 @@ def safe_parse_json(output):
 
 
 @router.post("/generate-qa/{story_id}")
-def generate_qa(story_id: int):
+def generate_qa(
+    story_id: int,
+    current_user: User = Depends(get_current_user_with_db)
+):
     with get_db() as db:
-        story_obj = db.query(Story).filter(Story.id == story_id).first()
+        # Verify story belongs to current user
+        story_obj = db.query(Story).join(Epic).join(Upload).filter(
+            Story.id == story_id,
+            Upload.user_id == current_user.id
+        ).first()
         if not story_obj:
             raise HTTPException(status_code=404, detail="Story not found")
 

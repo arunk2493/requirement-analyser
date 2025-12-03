@@ -1,12 +1,11 @@
 import { useState } from "react";
-import axios from "axios";
+import { generateEpics, generateStories, generateQA, generateTestPlan } from "../api/api";
 import { FaRobot, FaSpinner, FaExternalLinkAlt, FaSync, FaCheckCircle, FaExclamationCircle, FaArrowRight } from "react-icons/fa";
-
-const API_BASE = "http://localhost:8000";
 
 export default function AgenticAIPage() {
   const [uploadId, setUploadId] = useState("");
-  const [epicId, setEpicId] = useState("");
+  const [epicIdForStories, setEpicIdForStories] = useState("");
+  const [epicIdForTestPlan, setEpicIdForTestPlan] = useState("");
   const [storyId, setStoryId] = useState("");
   const [ragQuery, setRagQuery] = useState("");
 
@@ -45,9 +44,7 @@ export default function AgenticAIPage() {
     }
     try {
       setLoadingEpics(true);
-      const res = await axios.post(`${API_BASE}/agents/epic/generate`, {
-        upload_id: parseInt(uploadId),
-      });
+      const res = await generateEpics(Number.parseInt(uploadId));
       setGeneratedEpics(res.data.data?.epics || []);
       showMessage("success", "✅ Epics generated successfully!");
     } catch (e) {
@@ -59,15 +56,13 @@ export default function AgenticAIPage() {
 
   // Generate Stories
   const handleGenerateStories = async () => {
-    if (!epicId) {
+    if (!epicIdForStories) {
       showMessage("error", "Please enter an Epic ID");
       return;
     }
     try {
       setLoadingStories(true);
-      const res = await axios.post(`${API_BASE}/agents/story/generate`, {
-        epic_id: parseInt(epicId),
-      });
+      const res = await generateStories(Number.parseInt(epicIdForStories));
       setGeneratedStories(res.data.data?.stories || []);
       showMessage("success", "✅ Stories generated successfully!");
     } catch (e) {
@@ -85,9 +80,7 @@ export default function AgenticAIPage() {
     }
     try {
       setLoadingQA(true);
-      const res = await axios.post(`${API_BASE}/agents/qa/generate`, {
-        story_id: parseInt(storyId),
-      });
+      const res = await generateQA(Number.parseInt(storyId));
       setGeneratedQA(res.data.data?.qa_tests || []);
       showMessage("success", "✅ QA tests generated successfully!");
     } catch (e) {
@@ -99,15 +92,13 @@ export default function AgenticAIPage() {
 
   // Generate Test Plan
   const handleGenerateTestPlan = async () => {
-    if (!epicId) {
+    if (!epicIdForTestPlan) {
       showMessage("error", "Please enter an Epic ID");
       return;
     }
     try {
       setLoadingTestPlan(true);
-      const res = await axios.post(`${API_BASE}/agents/testplan/generate`, {
-        epic_id: parseInt(epicId),
-      });
+      const res = await generateTestPlan(Number.parseInt(epicIdForTestPlan));
       setGeneratedTestPlans(res.data.data?.test_plans || []);
       showMessage("success", "✅ Test plan generated successfully!");
     } catch (e) {
@@ -246,15 +237,15 @@ export default function AgenticAIPage() {
               </label>
               <input
                 type="number"
-                value={epicId}
-                onChange={(e) => setEpicId(e.target.value)}
+                value={epicIdForTestPlan}
+                onChange={(e) => setEpicIdForTestPlan(e.target.value)}
                 placeholder="Enter epic ID"
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
               />
             </div>
             <button
               onClick={handleGenerateTestPlan}
-              disabled={loadingTestPlan || !epicId}
+              disabled={loadingTestPlan || !epicIdForTestPlan}
               className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
             >
               {loadingTestPlan ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}
@@ -312,15 +303,15 @@ export default function AgenticAIPage() {
               </label>
               <input
                 type="number"
-                value={epicId}
-                onChange={(e) => setEpicId(e.target.value)}
+                value={epicIdForStories}
+                onChange={(e) => setEpicIdForStories(e.target.value)}
                 placeholder="Enter epic ID"
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none"
               />
             </div>
             <button
               onClick={handleGenerateStories}
-              disabled={loadingStories || !epicId}
+              disabled={loadingStories || !epicIdForStories}
               className="w-full px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
             >
               {loadingStories ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}

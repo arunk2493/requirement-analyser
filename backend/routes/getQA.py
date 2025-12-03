@@ -1,14 +1,25 @@
-from fastapi import APIRouter, HTTPException, Query
-from models.file_model import Story, QA
+from fastapi import APIRouter, HTTPException, Query, Depends
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from models.file_model import Story, QA, User, Epic, Upload
 from config.db import get_db
+from config.dependencies import get_current_user_with_db
 
 router = APIRouter()
 
 @router.get("/qa/{story_id}")
-def get_qa(story_id: int):
+def get_qa(
+    story_id: int,
+    current_user: User = Depends(get_current_user_with_db)
+):
     """Get all QA test cases for a given story"""
     with get_db() as db:
-        story_obj = db.query(Story).filter(Story.id == story_id).first()
+        # Verify story belongs to current user
+        story_obj = db.query(Story).join(Epic).join(Upload).filter(
+            Story.id == story_id,
+            Upload.user_id == current_user.id
+        ).first()
         if not story_obj:
             raise HTTPException(status_code=404, detail="Story not found")
 
@@ -37,10 +48,18 @@ def get_qa(story_id: int):
         }
 
 @router.get("/qa/{story_id}/{qa_id}")
-def get_qa_details(story_id: int, qa_id: int):
+def get_qa_details(
+    story_id: int,
+    qa_id: int,
+    current_user: User = Depends(get_current_user_with_db)
+):
     """Get details of a specific QA test case"""
     with get_db() as db:
-        story_obj = db.query(Story).filter(Story.id == story_id).first()
+        # Verify story belongs to current user
+        story_obj = db.query(Story).join(Epic).join(Upload).filter(
+            Story.id == story_id,
+            Upload.user_id == current_user.id
+        ).first()
         if not story_obj:
             raise HTTPException(status_code=404, detail="Story not found")
 
@@ -69,10 +88,15 @@ def get_all_qa(
     page_size: int = Query(10, ge=1, le=100),
     sort_by: str = Query("created_at"),
     sort_order: str = Query("desc"),
+    current_user: User = Depends(get_current_user_with_db)
 ):
     """Get all QA test cases across all stories (paginated). Supports sorting by `id` or `created_at`."""
     with get_db() as db:
-        query = db.query(QA).filter(QA.type == "qa")
+        # Get QA only from current user's uploads
+        query = db.query(QA).join(Story).join(Epic).join(Upload).filter(
+            QA.type == "qa",
+            Upload.user_id == current_user.id
+        )
         total_count = query.count()
         offset = (page - 1) * page_size
         sort_by = (sort_by or "created_at").lower()

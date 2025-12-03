@@ -6,7 +6,7 @@ import {
   fetchAllTestPlans
 } from "../api/api";
 
-import { FaHistory, FaSpinner, FaTimes, FaCopy } from "react-icons/fa";
+import { FaHistory, FaSpinner, FaTimes, FaCopy, FaSync } from "react-icons/fa";
 
 export default function History() {
   // Recent lists
@@ -15,6 +15,7 @@ export default function History() {
   const [recentQA, setRecentQA] = useState([]);
   const [recentTestPlans, setRecentTestPlans] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   // Modal state for automation scripts
   const [expandedScripts, setExpandedScripts] = useState({});
@@ -26,19 +27,24 @@ export default function History() {
   const loadRecentLists = async () => {
     try {
       setLoading(true);
+      setError(null);
       const [epRes, stRes, qaRes, tpRes] = await Promise.all([
-        fetchAllEpics(1, pageSize),
-        fetchAllStories(1, pageSize),
-        fetchAllQA(1, pageSize),
-        fetchAllTestPlans(1, pageSize),
+        fetchAllEpics(1, pageSize).catch(() => ({ data: { epics: [] } })),
+        fetchAllStories(1, pageSize).catch(() => ({ data: { stories: [] } })),
+        fetchAllQA(1, pageSize).catch(() => ({ data: { qa_tests: [] } })),
+        fetchAllTestPlans(1, pageSize).catch((e) => {
+          console.error("Test Plans fetch error:", e);
+          return { data: { test_plans: [] } };
+        }),
       ]);
 
-      setRecentEpics(epRes.data.epics || []);
-      setRecentStories(stRes.data.stories || []);
-      setRecentQA(qaRes.data.qa_tests || []);
-      setRecentTestPlans(tpRes.data.test_plans || []);
+      setRecentEpics(epRes.data?.epics || []);
+      setRecentStories(stRes.data?.stories || []);
+      setRecentQA(qaRes.data?.qa_tests || []);
+      setRecentTestPlans(tpRes.data?.test_plans || []);
     } catch (e) {
       console.error("Failed to load recent lists", e);
+      setError("Failed to load history. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -162,11 +168,28 @@ public class ${title.replace(/\\s+/g, '')}Test {
     <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
 
       {/* Header */}
-      <div className="mb-8 flex items-center gap-3">
-        <FaHistory className="text-4xl text-orange-600" />
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">📜 History</h1>
+      <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <FaHistory className="text-4xl text-orange-600" />
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">📜 History</h1>
+        </div>
+        <button
+          onClick={loadRecentLists}
+          disabled={loading}
+          className="p-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white rounded-lg transition"
+          title="Refresh history"
+        >
+          <FaSync className={`text-2xl ${loading ? "animate-spin" : ""}`} />
+        </button>
       </div>
       <p className="text-gray-600 dark:text-gray-400 mb-8">Recently created epics, stories, QA tests, and test plans (sorted by creation date - newest first)</p>
+
+      {/* Error State */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900 border-l-4 border-red-500 rounded-lg">
+          <p className="text-red-700 dark:text-red-100">{error}</p>
+        </div>
+      )}
 
       {/* Loading State */}
       {loading && (
@@ -348,9 +371,12 @@ public class ${title.replace(/\\s+/g, '')}Test {
             ) : (
               <div className="space-y-3">
                 {recentTestPlans.map((testPlan, idx) => (
-                  <div key={testPlan.id} className="p-3 bg-orange-50 dark:bg-gray-700 rounded-lg border border-orange-200 dark:border-gray-600 hover:shadow-md transition">
+                  <div key={testPlan.id} className="p-4 bg-orange-50 dark:bg-gray-700 rounded-lg border border-orange-200 dark:border-gray-600 hover:shadow-md transition">
                     <div className="flex items-start justify-between mb-2">
-                      <p className="font-semibold text-gray-900 dark:text-white">{idx + 1}. {getTestPlanTitle(testPlan)}</p>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900 dark:text-white">{idx + 1}. {testPlan.title || getTestPlanTitle(testPlan) || ('Test Plan ' + testPlan.id)}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatDateTime(testPlan.created_at)}</p>
+                      </div>
                       {testPlan.confluence_page_url && (
                         <a 
                           href={testPlan.confluence_page_url} 
@@ -362,9 +388,6 @@ public class ${title.replace(/\\s+/g, '')}Test {
                         </a>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {formatDateTime(testPlan.created_at)}
-                    </p>
                   </div>
                 ))}
               </div>

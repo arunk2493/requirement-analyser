@@ -1,7 +1,11 @@
-from fastapi import APIRouter, HTTPException
-from models.file_model import Upload, Epic, QA
+from fastapi import APIRouter, HTTPException, Depends
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from models.file_model import Upload, Epic, QA, User
 from config.gemini import generate_json
 from config.db import get_db
+from config.dependencies import get_current_user_with_db
 from atlassian import Confluence
 from config.config import CONFLUENCE_URL, CONFLUENCE_USERNAME, CONFLUENCE_PASSWORD, CONFLUENCE_SPACE_KEY, CONFLUENCE_ROOT_FOLDER_ID
 from rag.vectorstore import VectorStore
@@ -10,7 +14,16 @@ import json
 import uuid
 
 router = APIRouter()
-router = APIRouter()
+
+print("Confluence URL from config:", CONFLUENCE_URL)
+print("Confluence Username from config:", CONFLUENCE_USERNAME)
+print("Confluence Password from config:", CONFLUENCE_PASSWORD)
+print("Confluence Space Key from config:", CONFLUENCE_SPACE_KEY)
+print("Confluence Root Folder ID from config:", CONFLUENCE_ROOT_FOLDER_ID)
+print("Initializing Confluence client.............")
+
+# Initialize vectorstore for RAG indexing
+vectorstore = VectorStore()
 
 # Initialize Confluence client with config values
 confluence = Confluence(
@@ -83,9 +96,15 @@ def create_testplan_page(title: str, content: dict, parent_id: str):
 
 
 @router.post("/generate-epics/{upload_id}")
-def generate_epics(upload_id: int):
+def generate_epics(
+    upload_id: int,
+    current_user: User = Depends(get_current_user_with_db)
+):
     with get_db() as db:
-        upload_obj = db.query(Upload).filter(Upload.id == upload_id).first()
+        upload_obj = db.query(Upload).filter(
+            Upload.id == upload_id,
+            Upload.user_id == current_user.id
+        ).first()
         if not upload_obj:
             raise HTTPException(status_code=404, detail="Upload not found")
 

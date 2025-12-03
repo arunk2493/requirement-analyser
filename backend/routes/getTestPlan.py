@@ -1,6 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query
-from models.file_model import Epic, QA
+from fastapi import APIRouter, HTTPException, Query, Depends
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from models.file_model import Epic, QA, User, Upload
 from config.db import get_db
+from config.dependencies import get_current_user_with_db
 from config.config import CONFLUENCE_URL
 from typing import Optional
 
@@ -25,10 +29,17 @@ def get_confluence_page_url(page_id: str) -> Optional[str]:
     return f"{base}/pages/viewpage.action?pageId={pid}"
 
 @router.get("/testplans/{epic_id}")
-def get_testplans(epic_id: int):
+def get_testplans(
+    epic_id: int,
+    current_user: User = Depends(get_current_user_with_db)
+):
     """Get all test plans for a given epic"""
     with get_db() as db:
-        epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
+        # Verify epic belongs to current user
+        epic_obj = db.query(Epic).join(Upload).filter(
+            Epic.id == epic_id,
+            Upload.user_id == current_user.id
+        ).first()
         if not epic_obj:
             raise HTTPException(status_code=404, detail="Epic not found")
 
@@ -59,10 +70,18 @@ def get_testplans(epic_id: int):
         }
 
 @router.get("/testplans/{epic_id}/{testplan_id}")
-def get_testplan_details(epic_id: int, testplan_id: int):
+def get_testplan_details(
+    epic_id: int,
+    testplan_id: int,
+    current_user: User = Depends(get_current_user_with_db)
+):
     """Get details of a specific test plan"""
     with get_db() as db:
-        epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
+        # Verify epic belongs to current user
+        epic_obj = db.query(Epic).join(Upload).filter(
+            Epic.id == epic_id,
+            Upload.user_id == current_user.id
+        ).first()
         if not epic_obj:
             raise HTTPException(status_code=404, detail="Epic not found")
 
@@ -93,10 +112,15 @@ def get_all_testplans(
     page_size: int = Query(10, ge=1, le=100),
     sort_by: str = Query("created_at"),
     sort_order: str = Query("desc"),
+    current_user: User = Depends(get_current_user_with_db)
 ):
     """Get all test plans across all epics (paginated). Supports sorting by `id` or `created_at`."""
     with get_db() as db:
-        base_query = db.query(QA).filter(QA.type == "test_plan")
+        # Get test plans only from current user's uploads
+        base_query = db.query(QA).join(Epic).join(Upload).filter(
+            QA.type == "test_plan",
+            Upload.user_id == current_user.id
+        )
         total_count = base_query.count()
         offset = (page - 1) * page_size
         sort_by = (sort_by or "created_at").lower()

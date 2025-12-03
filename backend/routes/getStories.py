@@ -1,14 +1,25 @@
-from fastapi import APIRouter, HTTPException, Query
-from models.file_model import Epic, Story
+from fastapi import APIRouter, HTTPException, Query, Depends
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from models.file_model import Epic, Story, User, Upload
 from config.db import get_db
+from config.dependencies import get_current_user_with_db
 
 router = APIRouter()
 
 @router.get("/stories/{epic_id}")
-def get_stories(epic_id: int):
+def get_stories(
+    epic_id: int,
+    current_user: User = Depends(get_current_user_with_db)
+):
     """Get all stories for a given epic"""
     with get_db() as db:
-        epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
+        # Verify epic belongs to current user
+        epic_obj = db.query(Epic).join(Upload).filter(
+            Epic.id == epic_id,
+            Upload.user_id == current_user.id
+        ).first()
         if not epic_obj:
             raise HTTPException(status_code=404, detail="Epic not found")
 
@@ -35,10 +46,18 @@ def get_stories(epic_id: int):
         }
 
 @router.get("/stories/{epic_id}/{story_id}")
-def get_story_details(epic_id: int, story_id: int):
+def get_story_details(
+    epic_id: int,
+    story_id: int,
+    current_user: User = Depends(get_current_user_with_db)
+):
     """Get details of a specific story"""
     with get_db() as db:
-        epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
+        # Verify epic belongs to current user
+        epic_obj = db.query(Epic).join(Upload).filter(
+            Epic.id == epic_id,
+            Upload.user_id == current_user.id
+        ).first()
         if not epic_obj:
             raise HTTPException(status_code=404, detail="Epic not found")
 
@@ -67,10 +86,13 @@ def get_all_stories(
     page_size: int = Query(10, ge=1, le=100),
     sort_by: str = Query("created_at"),
     sort_order: str = Query("desc"),
+    current_user: User = Depends(get_current_user_with_db)
 ):
     """Get all stories across all epics (paginated). Supports sorting by `id` or `created_at`."""
     with get_db() as db:
-        total_count = db.query(Story).count()
+        # Get stories only from current user's uploads
+        base_query = db.query(Story).join(Epic).join(Upload).filter(Upload.user_id == current_user.id)
+        total_count = base_query.count()
         offset = (page - 1) * page_size
         sort_by = (sort_by or "created_at").lower()
         sort_order = (sort_order or "desc").lower()
@@ -84,7 +106,7 @@ def get_all_stories(
         else:
             order_clause = col.desc()
 
-        stories = db.query(Story).order_by(order_clause).offset(offset).limit(page_size).all()
+        stories = base_query.order_by(order_clause).offset(offset).limit(page_size).all()
 
         story_list = []
         for story in stories:

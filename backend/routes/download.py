@@ -1,7 +1,11 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from fastapi.responses import StreamingResponse
-from models.file_model import AggregatedUpload
+from models.file_model import AggregatedUpload, Upload, User
 from config.db import get_db
+from config.dependencies import get_current_user_with_db
 import json
 from io import BytesIO
 from fpdf import FPDF
@@ -11,9 +15,18 @@ router = APIRouter()
 @router.get("/download/{upload_id}")
 def download_aggregated(
     upload_id: int,
-    format: str = Query("json", enum=["json", "pdf"])
+    format: str = Query("json", enum=["json", "pdf"]),
+    current_user: User = Depends(get_current_user_with_db)
 ):
     with get_db() as db:
+        # Verify upload belongs to current user
+        upload = db.query(Upload).filter(
+            Upload.id == upload_id,
+            Upload.user_id == current_user.id
+        ).first()
+        if not upload:
+            raise HTTPException(status_code=404, detail="Upload not found")
+        
         agg = db.query(AggregatedUpload).filter(AggregatedUpload.upload_id == upload_id).first()
         if not agg:
             raise HTTPException(status_code=404, detail="Aggregated data not found")

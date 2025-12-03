@@ -1,7 +1,11 @@
-from fastapi import APIRouter, HTTPException
-from models.file_model import Epic, Story
+from fastapi import APIRouter, HTTPException, Depends
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from models.file_model import Epic, Story, User, Upload
 from config.gemini import generate_json
 from config.db import get_db
+from config.dependencies import get_current_user_with_db
 from rag.vectorstore import VectorStore
 import uuid
 
@@ -9,9 +13,16 @@ router = APIRouter()
 vectorstore = VectorStore()
 
 @router.post("/generate-stories/{epic_id}")
-def generate_stories(epic_id: int):
+def generate_stories(
+    epic_id: int,
+    current_user: User = Depends(get_current_user_with_db)
+):
     with get_db() as db:
-        epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
+        # Verify epic belongs to current user
+        epic_obj = db.query(Epic).join(Upload).filter(
+            Epic.id == epic_id,
+            Upload.user_id == current_user.id
+        ).first()
         if not epic_obj:
             raise HTTPException(status_code=404, detail="Epic not found")
 

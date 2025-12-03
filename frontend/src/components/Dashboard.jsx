@@ -8,6 +8,7 @@ import {
   FaArrowRight,
   FaFileAlt,
 } from "react-icons/fa";
+import { fetchUploads, fetchAllEpics, fetchAllStories, fetchAllTestPlans } from "../api/api";
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -16,15 +17,33 @@ export default function Dashboard() {
     stories: 0,
     testplans: 0,
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize with default values - can be updated with actual API calls
-    setStats({
-      uploads: 0,
-      epics: 0,
-      stories: 0,
-      testplans: 0,
-    });
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const [uploadsRes, epicsRes, storiesRes, testplansRes] = await Promise.all([
+          fetchUploads().catch(() => ({ data: { uploads: [] } })),
+          fetchAllEpics(1, 1).catch(() => ({ data: { total_epics: 0 } })),
+          fetchAllStories(1, 1).catch(() => ({ data: { total_stories: 0 } })),
+          fetchAllTestPlans(1, 1).catch(() => ({ data: { total_test_plans: 0 } })),
+        ]);
+
+        setStats({
+          uploads: uploadsRes.data?.uploads?.length || 0,
+          epics: epicsRes.data?.total_epics || 0,
+          stories: storiesRes.data?.total_stories || 0,
+          testplans: testplansRes.data?.total_test_plans || 0,
+        });
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
   }, []);
 
   const cards = [
