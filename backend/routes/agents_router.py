@@ -19,6 +19,10 @@ class QAGenerationRequest(BaseModel):
     story_id: int
 
 
+class TestPlanGenerationRequest(BaseModel):
+    epic_id: int
+
+
 class RAGSearchRequest(BaseModel):
     query: str
     upload_id: Optional[int] = None
@@ -57,6 +61,18 @@ def generate_stories_endpoint(request: StoryGenerationRequest):
 def generate_qa_endpoint(request: QAGenerationRequest):
     """Generate QA test cases from a story using QAAgent"""
     response = coordinator.generate_qa(request.story_id)
+    if not response.success:
+        raise HTTPException(status_code=400, detail=response.error)
+    return {
+        "message": response.message,
+        "data": response.data
+    }
+
+
+@router.post("/testplan/generate")
+def generate_testplan_endpoint(request: TestPlanGenerationRequest):
+    """Generate test plan from an epic using TestPlanAgent"""
+    response = coordinator.generate_testplan(request.epic_id)
     if not response.success:
         raise HTTPException(status_code=400, detail=response.error)
     return {

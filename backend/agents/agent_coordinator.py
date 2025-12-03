@@ -3,6 +3,7 @@ from .base_agent import AgentResponse
 from .epic_agent import EpicAgent
 from .story_agent import StoryAgent
 from .qa_agent import QAAgent
+from .testplan_agent import TestPlanAgent
 from .rag_agent import RAGAgent
 import logging
 
@@ -16,6 +17,7 @@ class AgentCoordinator:
         self.epic_agent = EpicAgent()
         self.story_agent = StoryAgent()
         self.qa_agent = QAAgent()
+        self.testplan_agent = TestPlanAgent()
         self.rag_agent = RAGAgent()
 
     def generate_epics(self, upload_id: int) -> AgentResponse:
@@ -32,6 +34,11 @@ class AgentCoordinator:
         """Trigger QA generation"""
         logger.info(f"Coordinator: Triggering QA generation for story {story_id}")
         return self.qa_agent.execute({"story_id": story_id})
+
+    def generate_testplan(self, epic_id: int) -> AgentResponse:
+        """Trigger test plan generation"""
+        logger.info(f"Coordinator: Triggering test plan generation for epic {epic_id}")
+        return self.testplan_agent.execute({"epic_id": epic_id})
 
     def retrieve_documents(self, query: str, upload_id: int = None, top_k: int = 5) -> AgentResponse:
         """Retrieve relevant documents from RAG"""
