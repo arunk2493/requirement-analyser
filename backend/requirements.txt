@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+psycopg2
+sqlalchemy
+google-generativeai
+python-dotenv
+pydantic
+numpy
+scikit-learn
+sentence-transformers
+PyPDF2
+python-docx
+python-multipart
+fpdf2
+atlassian-python-api
