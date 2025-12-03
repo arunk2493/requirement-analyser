@@ -5,6 +5,8 @@ from .story_agent import StoryAgent
 from .qa_agent import QAAgent
 from .testplan_agent import TestPlanAgent
 from .rag_agent import RAGAgent
+from models.file_model import Upload, Epic, Story, QA
+from config.db import get_db
 import logging
 
 logger = logging.getLogger(__name__)
@@ -93,3 +95,169 @@ class AgentCoordinator:
         logger.info(f"Coordinator: Workflow completed. Generated {len(workflow_result['epics'])} epics, "
                    f"{len(workflow_result['stories'])} stories, {len(workflow_result['qa'])} QA tests")
         return workflow_result
+
+    def get_epics(self, upload_id: int) -> AgentResponse:
+        """Get all epics for a given upload"""
+        logger.info(f"Coordinator: Fetching epics for upload {upload_id}")
+        try:
+            with get_db() as db:
+                upload_obj = db.query(Upload).filter(Upload.id == upload_id).first()
+                if not upload_obj:
+                    return AgentResponse(
+                        success=False,
+                        error="Upload not found",
+                        message="",
+                        data={}
+                    )
+                
+                epics = db.query(Epic).filter(Epic.upload_id == upload_id).all()
+                epic_list = [
+                    {
+                        "id": e.id,
+                        "name": e.name,
+                        "content": e.content,
+                        "confluence_page_id": e.confluence_page_id,
+                        "created_at": str(e.created_at)
+                    }
+                    for e in epics
+                ]
+                
+                return AgentResponse(
+                    success=True,
+                    message=f"Retrieved {len(epic_list)} epics",
+                    data={"epics": epic_list, "total": len(epic_list)},
+                    error=None
+                )
+        except Exception as e:
+            logger.error(f"Error fetching epics: {str(e)}")
+            return AgentResponse(
+                success=False,
+                error=str(e),
+                message="",
+                data={}
+            )
+
+    def get_stories(self, epic_id: int) -> AgentResponse:
+        """Get all stories for a given epic"""
+        logger.info(f"Coordinator: Fetching stories for epic {epic_id}")
+        try:
+            with get_db() as db:
+                epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
+                if not epic_obj:
+                    return AgentResponse(
+                        success=False,
+                        error="Epic not found",
+                        message="",
+                        data={}
+                    )
+                
+                stories = db.query(Story).filter(Story.epic_id == epic_id).all()
+                story_list = [
+                    {
+                        "id": s.id,
+                        "name": s.name,
+                        "epic_id": s.epic_id,
+                        "content": s.content,
+                        "created_at": str(s.created_at)
+                    }
+                    for s in stories
+                ]
+                
+                return AgentResponse(
+                    success=True,
+                    message=f"Retrieved {len(story_list)} stories",
+                    data={"stories": story_list, "total": len(story_list)},
+                    error=None
+                )
+        except Exception as e:
+            logger.error(f"Error fetching stories: {str(e)}")
+            return AgentResponse(
+                success=False,
+                error=str(e),
+                message="",
+                data={}
+            )
+
+    def get_qa(self, story_id: int) -> AgentResponse:
+        """Get all QA test cases for a given story"""
+        logger.info(f"Coordinator: Fetching QA tests for story {story_id}")
+        try:
+            with get_db() as db:
+                story_obj = db.query(Story).filter(Story.id == story_id).first()
+                if not story_obj:
+                    return AgentResponse(
+                        success=False,
+                        error="Story not found",
+                        message="",
+                        data={}
+                    )
+                
+                qa_tests = db.query(QA).filter(QA.story_id == story_id).all()
+                qa_list = [
+                    {
+                        "id": q.id,
+                        "story_id": q.story_id,
+                        "content": q.content,
+                        "created_at": str(q.created_at)
+                    }
+                    for q in qa_tests
+                ]
+                
+                return AgentResponse(
+                    success=True,
+                    message=f"Retrieved {len(qa_list)} QA tests",
+                    data={"qa_tests": qa_list, "total": len(qa_list)},
+                    error=None
+                )
+        except Exception as e:
+            logger.error(f"Error fetching QA tests: {str(e)}")
+            return AgentResponse(
+                success=False,
+                error=str(e),
+                message="",
+                data={}
+            )
+
+    def get_testplan(self, epic_id: int) -> AgentResponse:
+        """Get all test plans for a given epic"""
+        logger.info(f"Coordinator: Fetching test plans for epic {epic_id}")
+        try:
+            with get_db() as db:
+                epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
+                if not epic_obj:
+                    return AgentResponse(
+                        success=False,
+                        error="Epic not found",
+                        message="",
+                        data={}
+                    )
+                
+                # Get test plans associated with stories in this epic
+                stories = db.query(Story).filter(Story.epic_id == epic_id).all()
+                
+                # For now, return stories as the parent container for test plans
+                # In a full implementation, you'd have a TestPlan model
+                story_list = [
+                    {
+                        "id": s.id,
+                        "name": s.name,
+                        "content": s.content,
+                        "created_at": str(s.created_at)
+                    }
+                    for s in stories
+                ]
+                
+                return AgentResponse(
+                    success=True,
+                    message=f"Retrieved {len(story_list)} stories with test plans",
+                    data={"test_plans": story_list, "total": len(story_list)},
+                    error=None
+                )
+        except Exception as e:
+            logger.error(f"Error fetching test plans: {str(e)}")
+            return AgentResponse(
+                success=False,
+                error=str(e),
+                message="",
+                data={}
+            )

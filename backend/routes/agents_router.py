@@ -115,3 +115,52 @@ def execute_workflow_endpoint(request: WorkflowExecutionRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# GET endpoints for retrieving generated artifacts
+@router.get("/epic/list")
+def get_epics_endpoint(upload_id: int, current_user: TokenData = Depends(get_current_user)):
+    """Get all epics for a given upload"""
+    response = coordinator.get_epics(upload_id)
+    if not response.success:
+        raise HTTPException(status_code=400, detail=response.error)
+    return {
+        "message": response.message,
+        "data": response.data
+    }
+
+
+@router.get("/story/list")
+def get_stories_endpoint(epic_id: int, current_user: TokenData = Depends(get_current_user)):
+    """Get all stories for a given epic"""
+    response = coordinator.get_stories(epic_id)
+    if not response.success:
+        raise HTTPException(status_code=400, detail=response.error)
+    return {
+        "message": response.message,
+        "data": response.data
+    }
+
+
+@router.get("/qa/list")
+def get_qa_endpoint(story_id: int, current_user: TokenData = Depends(get_current_user)):
+    """Get all QA test cases for a given story"""
+    response = coordinator.get_qa(story_id)
+    if not response.success:
+        raise HTTPException(status_code=400, detail=response.error)
+    return {
+        "message": response.message,
+        "data": response.data
+    }
+
+
+@router.get("/testplan/list")
+def get_testplan_endpoint(epic_id: int, current_user: TokenData = Depends(get_current_user)):
+    """Get all test plans for a given epic"""
+    response = coordinator.get_testplan(epic_id)
+    if not response.success:
+        raise HTTPException(status_code=400, detail=response.error)
+    return {
+        "message": response.message,
+        "data": response.data
+    }

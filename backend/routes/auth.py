@@ -88,9 +88,9 @@ async def register(user: UserRegister):
             
             logger.info(f"User created successfully with ID: {new_user.id}")
             
-            # Create access token
+            # Create access token with user_id
             logger.info(f"Creating access token for: {new_user.email}")
-            access_token = create_access_token(new_user.email)
+            access_token = create_access_token(new_user.email, user_id=new_user.id)
             logger.info(f"Access token created (length: {len(access_token)})")
             
             logger.info(f"User registered successfully: {user.email}")
@@ -141,8 +141,8 @@ async def login(user: UserLogin):
             
             logger.info(f"Password verified successfully for: {user.email}")
             
-            # Create access token
-            access_token = create_access_token(db_user.email)
+            # Create access token with user_id
+            access_token = create_access_token(db_user.email, user_id=db_user.id)
             
             logger.info(f"User logged in successfully: {user.email}")
             

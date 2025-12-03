@@ -11,6 +11,10 @@ from config.db import get_db
 from config.auth import get_current_user, TokenData
 from atlassian import Confluence
 import datetime
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -54,6 +58,10 @@ def create_testplan_page(title: str, content: dict, parent_id: str):
 
 @router.post("/generate-testplan/{story_id}")
 def generate_testplan(story_id: int, current_user: TokenData = Depends(get_current_user)):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"generate_testplan: Authenticated user={current_user.email}, user_id={current_user.user_id}")
+    
     with get_db() as db:
         # Fetch story
         story_obj = db.query(Story).filter(Story.id == story_id).first()

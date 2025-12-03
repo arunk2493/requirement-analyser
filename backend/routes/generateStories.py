@@ -11,12 +11,17 @@ from config.db import get_db
 from config.auth import get_current_user, TokenData
 from rag.vectorstore import VectorStore
 import uuid
+import json
 
 router = APIRouter()
 vectorstore = VectorStore()
 
 @router.post("/generate-stories/{epic_id}")
 def generate_stories(epic_id: int, current_user: TokenData = Depends(get_current_user)):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"generate_stories: Authenticated user={current_user.email}, user_id={current_user.user_id}")
+    
     with get_db() as db:
         epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
         if not epic_obj:

@@ -20,6 +20,7 @@ class User(Base):
 class Upload(Base):
     __tablename__ = "uploads"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     filename = Column(String(255))
     content = Column(JSONB)  # store requirement content as JSON
     confluence_page_id = Column(String(50), nullable=True)

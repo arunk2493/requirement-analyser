@@ -60,7 +60,11 @@ async def upload_file(
 
         # Store in DB
         with get_db() as db:
-            upload_obj = Upload(filename=file.filename, content=content_json)
+            upload_obj = Upload(
+                filename=file.filename, 
+                content=content_json,
+                user_id=current_user.user_id
+            )
             db.add(upload_obj)
             db.commit()      # <-- commit transaction
             db.refresh(upload_obj)  # <-- refresh to get the ID

@@ -4,7 +4,7 @@ from pathlib import Path
 # Add backend directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from models.file_model import Upload, Epic, QA
 from config.gemini import generate_json
 from config.db import get_db
@@ -15,6 +15,9 @@ from rag.vectorstore import VectorStore
 import datetime
 import json
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 router = APIRouter()
@@ -93,6 +96,10 @@ def create_testplan_page(title: str, content: dict, parent_id: str):
 
 @router.post("/generate-epics/{upload_id}")
 def generate_epics(upload_id: int, current_user: TokenData = Depends(get_current_user)):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"generate_epics: Authenticated user={current_user.email}, user_id={current_user.user_id}")
+    
     with get_db() as db:
         upload_obj = db.query(Upload).filter(Upload.id == upload_id).first()
         if not upload_obj:

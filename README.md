@@ -48,12 +48,20 @@ requirement-analyser/
 
 **Quick Start**
 
-### Database Migration (First Time Only)
-If you have an existing `users` table without the `name` column, run the migration:
-```bash
-cd /path/to/requirement-analyser
-python3 migrate_users_table.py
-```
+### Database Migrations (First Time Only)
+If you have an existing database, run these migrations:
+
+1. **Add name column to users table** (if you have existing users):
+   ```bash
+   cd /path/to/requirement-analyser
+   python3 migrate_users_table.py
+   ```
+
+2. **Add user_id column to uploads table** (to link uploads to users):
+   ```bash
+   cd /path/to/requirement-analyser
+   python3 migrate_uploads_user_id.py
+   ```
 
 ### Option 1: Use startup scripts (Recommended)
 
@@ -133,9 +141,14 @@ See `AGENTIC_ARCHITECTURE.md` for detailed agent documentation.
 - `POST /auth/verify-token` - Verify JWT token and return user info
 
 ### Agentic Endpoints (NEW)
-- `POST /agents/epic/generate` - Generate epics from upload
-- `POST /agents/story/generate` - Generate stories from epic
-- `POST /agents/qa/generate` - Generate QA from story
+- `POST /agents/epic/generate` - Generate epics from upload (requires Bearer token)
+- `POST /agents/story/generate` - Generate stories from epic (requires Bearer token)
+- `POST /agents/qa/generate` - Generate QA from story (requires Bearer token)
+- `POST /agents/testplan/generate` - Generate test plan from epic (requires Bearer token)
+- `GET /agents/epic/list?upload_id=1` - Retrieve all epics for upload (requires Bearer token)
+- `GET /agents/story/list?epic_id=1` - Retrieve all stories for epic (requires Bearer token)
+- `GET /agents/qa/list?story_id=1` - Retrieve all QA tests for story (requires Bearer token)
+- `GET /agents/testplan/list?epic_id=1` - Retrieve all test plans for epic (requires Bearer token)
 - `POST /agents/rag/search` - Retrieve documents via RAG
 - `POST /agents/workflow/execute` - Execute full workflow
 
@@ -153,7 +166,41 @@ See `AGENTIC_ARCHITECTURE.md` for detailed agent documentation.
 
 **Testing**
 
-Run tests after startup:
+### Authentication
+
+All agentic endpoints (`/agents/*`) require Bearer token authentication. Get a token by:
+
+1. Register a new user:
+```bash
+curl -X POST http://localhost:8000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "user@example.com",
+    "password": "securepassword123"
+  }'
+```
+
+2. Login to get access token:
+```bash
+curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "securepassword123"
+  }'
+```
+
+Response contains `access_token` - use this token in all agentic requests as: `Authorization: Bearer {access_token}`
+
+If token is missing, expired, or invalid, endpoints will return:
+```json
+{
+  "detail": "Missing authentication credentials. Please include Authorization header with Bearer token"
+}
+```
+
+### API Testing
 ```bash
 # Test backend health
 curl http://localhost:8000/
@@ -196,13 +243,45 @@ curl -X POST "http://localhost:8000/auth/verify-token?token=YOUR_JWT_TOKEN"
 #   "id": 1
 # }
 
-# Test epic generation
+# Test epic generation (with Bearer token)
 curl -X POST http://localhost:8000/agents/epic/generate \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{"upload_id": 1}'
 
-# Test RAG search
-curl "http://localhost:8000/agents/rag/search?query=authentication&upload_id=1"
+# Test story generation (with Bearer token)
+curl -X POST http://localhost:8000/agents/story/generate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"epic_id": 1}'
+
+# Test QA generation (with Bearer token)
+curl -X POST http://localhost:8000/agents/qa/generate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"story_id": 1}'
+
+# Test test plan generation (with Bearer token)
+curl -X POST http://localhost:8000/agents/testplan/generate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"epic_id": 1}'
+
+# Test retrieving epics (with Bearer token)
+curl -X GET "http://localhost:8000/agents/epic/list?upload_id=1" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Test retrieving stories (with Bearer token)
+curl -X GET "http://localhost:8000/agents/story/list?epic_id=1" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Test retrieving QA tests (with Bearer token)
+curl -X GET "http://localhost:8000/agents/qa/list?story_id=1" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Test retrieving test plans (with Bearer token)
+curl -X GET "http://localhost:8000/agents/testplan/list?epic_id=1" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 **Troubleshooting**

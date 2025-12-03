@@ -35,6 +35,7 @@ security = HTTPBearer(auto_error=False)
 
 class TokenData(BaseModel):
     email: str
+    user_id: Optional[int] = None
 
 
 class Token(BaseModel):
@@ -76,45 +77,88 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
-def create_access_token(email: str, expires_delta: timedelta = None) -> str:
+def create_access_token(email: str, user_id: int = None, expires_delta: timedelta = None) -> str:
     """Create a JWT access token"""
     if expires_delta is None:
         expires_delta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     
     expire = datetime.now(timezone.utc) + expires_delta
     to_encode = {"email": email, "exp": expire}
+    if user_id:
+        to_encode["user_id"] = user_id
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 
 def verify_token(token: str) -> Optional[TokenData]:
     """Verify and decode a JWT token"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("email")
+        user_id: int = payload.get("user_id")
+        
         if email is None:
+            logger.warning("Token verification failed: Missing email claim in JWT")
             return None
-        return TokenData(email=email)
-    except JWTError:
+        
+        logger.debug(f"Token verified: email={email}, user_id={user_id}")
+        return TokenData(email=email, user_id=user_id)
+    except JWTError as e:
+        logger.warning(f"JWT decode error: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error verifying token: {str(e)}", exc_info=True)
         return None
 
 
 def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> TokenData:
     """Dependency function to validate JWT token from Authorization header"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if not credentials:
+        logger.warning("Authentication failed: Missing authentication credentials (no Authorization header)")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing authentication credentials",
+            detail={
+                "error": "Missing authentication credentials. Please include Authorization header with Bearer token",
+                "status": "unauthorized",
+                "code": "MISSING_BEARER_TOKEN",
+                "help": "Include Authorization header with Bearer token: Authorization: Bearer {your_jwt_token}",
+                "steps": [
+                    "1. Call POST /auth/register or POST /auth/login to get access_token",
+                    "2. Include header: Authorization: Bearer {access_token}",
+                    "3. Retry the request"
+                ]
+            },
             headers={"WWW-Authenticate": "Bearer"},
         )
     
     token = credentials.credentials
+    logger.debug(f"Received token: {token[:20]}..." if len(token) > 20 else f"Received token: {token}")
+    
     token_data = verify_token(token)
     
     if not token_data:
+        logger.warning("Authentication failed: Invalid or expired token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail={
+                "error": "Invalid or expired token. Please login again",
+                "status": "unauthorized",
+                "code": "INVALID_TOKEN",
+                "help": "Get a new token by calling POST /auth/login with your credentials",
+                "steps": [
+                    "1. Call POST /auth/login with email and password",
+                    "2. Use the new access_token in Authorization header",
+                    "3. Retry the request"
+                ]
+            },
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    logger.info(f"Authentication successful: user_email={token_data.email}, user_id={token_data.user_id}")
     return token_data

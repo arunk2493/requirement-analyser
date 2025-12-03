@@ -7,7 +7,7 @@ export const api = axios.create({
   baseURL: API_BASE,
 });
 
-// Add token to all requests
+// Add token to all requests with Bearer scheme
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -19,14 +19,16 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle 401 responses
+// Handle 401 responses - token expired or invalid
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       // Token expired or invalid, clear localStorage and redirect to login
+      console.error("Authentication failed:", error.response?.data?.detail);
       localStorage.removeItem("token");
       localStorage.removeItem("email");
+      localStorage.removeItem("user_id");
       window.location.href = "/";
     }
     return Promise.reject(error);
@@ -57,7 +59,55 @@ export const uploadFile = (file) => {
 export const fetchUploads = () =>
   api.get(`${API_BASE}/list-files`);
 
-// Generation endpoints (POST)
+// ============================================
+// AGENTIC GENERATION ENDPOINTS (POST)
+// All require Bearer token in Authorization header
+// ============================================
+
+export const generateEpicsAgent = (uploadId) =>
+  api.post(`${API_BASE}/agents/epic/generate`, { upload_id: uploadId });
+
+export const generateStoriesAgent = (epicId) =>
+  api.post(`${API_BASE}/agents/story/generate`, { epic_id: epicId });
+
+export const generateQAAgent = (storyId) =>
+  api.post(`${API_BASE}/agents/qa/generate`, { story_id: storyId });
+
+export const generateTestPlanAgent = (epicId) =>
+  api.post(`${API_BASE}/agents/testplan/generate`, { epic_id: epicId });
+
+export const executeWorkflow = (uploadId) =>
+  api.post(`${API_BASE}/agents/workflow/execute`, { upload_id: uploadId });
+
+// ============================================
+// AGENTIC RETRIEVAL ENDPOINTS (GET)
+// All require Bearer token in Authorization header
+// ============================================
+
+export const getEpicsAgent = (uploadId) =>
+  api.get(`${API_BASE}/agents/epic/list`, { params: { upload_id: uploadId } });
+
+export const getStoriesAgent = (epicId) =>
+  api.get(`${API_BASE}/agents/story/list`, { params: { epic_id: epicId } });
+
+export const getQAAgent = (storyId) =>
+  api.get(`${API_BASE}/agents/qa/list`, { params: { story_id: storyId } });
+
+export const getTestPlanAgent = (epicId) =>
+  api.get(`${API_BASE}/agents/testplan/list`, { params: { epic_id: epicId } });
+
+export const ragSearch = (query, uploadId, topK = 5) =>
+  api.post(`${API_BASE}/agents/rag/search`, { 
+    query, 
+    upload_id: uploadId, 
+    top_k: topK 
+  });
+
+// ============================================
+// LEGACY GENERATION ENDPOINTS (POST)
+// All require Bearer token in Authorization header
+// ============================================
+
 export const generateEpics = (uploadId) =>
   api.post(`${API_BASE}/generate-epics/${uploadId}`);
 
@@ -67,7 +117,13 @@ export const generateStories = (epicId) =>
 export const generateQA = (storyId) =>
   api.post(`${API_BASE}/generate-qa/${storyId}`);
 
-// GET Endpoints for hierarchical data
+export const generateTestPlan = (storyId) =>
+  api.post(`${API_BASE}/generate-testplan/${storyId}`);
+
+// ============================================
+// LEGACY DATA ENDPOINTS (GET)
+// All require Bearer token in Authorization header
+// ============================================
 export const fetchEpicsByUpload = (uploadId) => 
   api.get(`${API_BASE}/epics/${uploadId}`);
 
