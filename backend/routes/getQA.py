@@ -5,7 +5,7 @@ from pathlib import Path
 # Add backend directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models.file_model import Story, QA
+from models.file_model import Upload, Epic, Story, QA
 from config.db import get_db
 from config.auth import get_current_user, TokenData
 
@@ -18,6 +18,12 @@ def get_qa(story_id: int, current_user: TokenData = Depends(get_current_user)):
         story_obj = db.query(Story).filter(Story.id == story_id).first()
         if not story_obj:
             raise HTTPException(status_code=404, detail="Story not found")
+        epic_obj = db.query(Epic).filter(Epic.id == story_obj.epic_id).first()
+        if not epic_obj:
+            raise HTTPException(status_code=404, detail="Epic not found")
+        upload_obj = db.query(Upload).filter(Upload.id == epic_obj.upload_id, Upload.user_id == current_user.user_id).first()
+        if not upload_obj:
+            raise HTTPException(status_code=403, detail="You don't have access to this story")
 
         qa_tests = db.query(QA).filter(
             QA.story_id == story_id,
@@ -50,6 +56,12 @@ def get_qa_details(story_id: int, qa_id: int, current_user: TokenData = Depends(
         story_obj = db.query(Story).filter(Story.id == story_id).first()
         if not story_obj:
             raise HTTPException(status_code=404, detail="Story not found")
+        epic_obj = db.query(Epic).filter(Epic.id == story_obj.epic_id).first()
+        if not epic_obj:
+            raise HTTPException(status_code=404, detail="Epic not found")
+        upload_obj = db.query(Upload).filter(Upload.id == epic_obj.upload_id, Upload.user_id == current_user.user_id).first()
+        if not upload_obj:
+            raise HTTPException(status_code=403, detail="You don't have access to this story")
 
         qa = db.query(QA).filter(
             QA.id == qa_id,
@@ -78,9 +90,49 @@ def get_all_qa(
     sort_order: str = Query("desc"),
     current_user: TokenData = Depends(get_current_user),
 ):
-    """Get all QA test cases across all stories (paginated). Supports sorting by `id` or `created_at`."""
+    """Get all QA test cases from user's stories (paginated). Supports sorting by `id` or `created_at`."""
     with get_db() as db:
-        query = db.query(QA).filter(QA.type == "qa")
+        # Get user's uploads, epics, and stories
+        user_uploads = db.query(Upload.id).filter(Upload.user_id == current_user.user_id).all()
+        upload_ids = [u[0] for u in user_uploads]
+        
+        if not upload_ids:
+            return {
+                "message": "No QA tests found for this user",
+                "total_qa_tests": 0,
+                "current_page": page,
+                "page_size": page_size,
+                "total_pages": 0,
+                "qa_tests": []
+            }
+        
+        user_epics = db.query(Epic.id).filter(Epic.upload_id.in_(upload_ids)).all()
+        epic_ids = [e[0] for e in user_epics]
+        
+        if not epic_ids:
+            return {
+                "message": "No QA tests found for this user",
+                "total_qa_tests": 0,
+                "current_page": page,
+                "page_size": page_size,
+                "total_pages": 0,
+                "qa_tests": []
+            }
+        
+        user_stories = db.query(Story.id).filter(Story.epic_id.in_(epic_ids)).all()
+        story_ids = [s[0] for s in user_stories]
+        
+        if not story_ids:
+            return {
+                "message": "No QA tests found for this user",
+                "total_qa_tests": 0,
+                "current_page": page,
+                "page_size": page_size,
+                "total_pages": 0,
+                "qa_tests": []
+            }
+        
+        query = db.query(QA).filter(QA.type == "qa", QA.story_id.in_(story_ids))
         total_count = query.count()
         offset = (page - 1) * page_size
         sort_by = (sort_by or "created_at").lower()

@@ -138,6 +138,7 @@ Epic:
 
                 # Create test plan entry in database
                 testplan_obj = QA(
+                    epic_id=epic_id,
                     type="test_plan",
                     content=testplan_data
                 )

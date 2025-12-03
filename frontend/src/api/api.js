@@ -56,8 +56,8 @@ export const uploadFile = (file) => {
   });
 };
 
-export const fetchUploads = () =>
-  api.get(`${API_BASE}/list-files`);
+export const fetchUploads = (page = 1, page_size = 100) =>
+  api.get(`${API_BASE}/uploads`, { params: { page, page_size } });
 
 // ============================================
 // AGENTIC GENERATION ENDPOINTS (POST)

@@ -33,10 +33,10 @@ export default function History() {
         fetchAllTestPlans(1, pageSize),
       ]);
 
-      setRecentEpics(epRes.data.epics || []);
-      setRecentStories(stRes.data.stories || []);
-      setRecentQA(qaRes.data.qa_tests || []);
-      setRecentTestPlans(tpRes.data.test_plans || []);
+      setRecentEpics(epRes.data.data?.epics || epRes.data.epics || []);
+      setRecentStories(stRes.data.data?.stories || stRes.data.stories || []);
+      setRecentQA(qaRes.data.data?.qa_tests || qaRes.data.qa_tests || qaRes.data.qa || []);
+      setRecentTestPlans(tpRes.data.data?.test_plans || tpRes.data.test_plans || []);
     } catch (e) {
       console.error("Failed to load recent lists", e);
     } finally {
@@ -46,6 +46,16 @@ export default function History() {
 
   useEffect(() => {
     loadRecentLists();
+    
+    // Listen for storage changes (user login from another tab/window)
+    const handleStorageChange = (e) => {
+      if (e.key === 'token' && e.newValue) {
+        loadRecentLists();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const getTestTitle = (qa) => {

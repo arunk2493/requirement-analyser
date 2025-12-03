@@ -14,7 +14,7 @@ router = APIRouter()
 @router.get("/list-files")
 def list_files(current_user: TokenData = Depends(get_current_user)):
     with get_db() as db:
-        uploads = db.query(Upload).all()
+        uploads = db.query(Upload).filter(Upload.user_id == current_user.user_id).all()
         result = []
 
         for up in uploads:

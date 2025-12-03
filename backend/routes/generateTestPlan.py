@@ -56,20 +56,15 @@ def create_testplan_page(title: str, content: dict, parent_id: str):
     return page, title_ts
 
 
-@router.post("/generate-testplan/{story_id}")
-def generate_testplan(story_id: int, current_user: TokenData = Depends(get_current_user)):
+@router.post("/generate-testplan/{epic_id}")
+def generate_testplan(epic_id: int, current_user: TokenData = Depends(get_current_user)):
     import logging
     logger = logging.getLogger(__name__)
     logger.info(f"generate_testplan: Authenticated user={current_user.email}, user_id={current_user.user_id}")
     
     with get_db() as db:
-        # Fetch story
-        story_obj = db.query(Story).filter(Story.id == story_id).first()
-        if not story_obj:
-            raise HTTPException(status_code=404, detail="Story not found")
-
-        # Fetch epic details using story.epic_id
-        epic_obj = db.query(Epic).filter(Epic.id == story_obj.epic_id).first()
+        # Fetch epic
+        epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
         if not epic_obj:
             raise HTTPException(status_code=404, detail="Epic not found")
 
@@ -93,8 +88,8 @@ Each test plan object should contain:
 DO NOT ADD any text outside JSON.
 DO NOT wrap JSON inside keys.
 
-Story:
-{story_obj.content}
+Epic:
+{epic_obj.content}
 """
 
         # Generate JSON from Gemini
@@ -111,7 +106,7 @@ Story:
         for plan in testplan_list:
             # Save QA in DB
             testplan_db = QA(
-                story_id=story_id,
+                epic_id=epic_id,
                 type="test_plan",
                 content=plan
             )
@@ -120,7 +115,7 @@ Story:
 
             # Create Confluence page under the epic's page
             try:
-                confluence_page, title_ts = create_testplan_page(
+                confluence_page, _ = create_testplan_page(
                     plan.get("title", "Test Plan"), plan, epic_obj.confluence_page_id
                 )
                 testplan_db.confluence_page_id = confluence_page['id']
@@ -136,6 +131,6 @@ Story:
 
         return {
             "message": "Test plan generated and pages created in Confluence",
-            "story_id": story_id,
+            "epic_id": epic_id,
             "test_plan": saved_items
         }
