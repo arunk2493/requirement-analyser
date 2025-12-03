@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config.db import Base, engine
-from routes import upload, generateStories, generateEpics, generateQA, listFiles, generateTestPlan, getEpics, getStories, getQA, getTestPlan
+from routes import upload, generateStories, generateEpics, generateQA, listFiles, generateTestPlan, getEpics, getStories, getQA, getTestPlan, agents_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -26,3 +26,4 @@ app.include_router(getEpics.router)
 app.include_router(getStories.router)
 app.include_router(getQA.router)
 app.include_router(getTestPlan.router)
+app.include_router(agents_router.router)
