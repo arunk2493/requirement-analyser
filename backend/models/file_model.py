@@ -9,6 +9,7 @@ class Upload(Base):
     filename = Column(String(255))
     content = Column(JSONB)  # store requirement content as JSON
     confluence_page_id = Column(String(50), nullable=True)
+    vectorstore_id = Column(String(255), nullable=True)  # unique ID for this upload's vector store
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 class Epic(Base):
