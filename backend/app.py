@@ -39,6 +39,7 @@ app.add_middleware(
         "http://127.0.0.1:5174",
         "localhost:5173",
         "localhost:5174",
+        "https://requirement-analyser.onrender.com",  # Production frontend
         "*"  # Allow all origins in development
     ],
     allow_credentials=True,
