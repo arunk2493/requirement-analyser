@@ -1,7 +1,14 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+import sys
+from pathlib import Path
+
+# Add backend directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from models.file_model import Upload, Epic
 from config.db import get_db
 from config.config import CONFLUENCE_URL
+from config.auth import get_current_user, TokenData
 from typing import Optional
 
 router = APIRouter()
@@ -24,12 +31,12 @@ def get_confluence_page_url(page_id: str) -> Optional[str]:
     return f"{base}/pages/viewpage.action?pageId={pid}"
 
 @router.get("/epics/{upload_id}")
-def get_epics(upload_id: int):
+def get_epics(upload_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get all epics for a given upload"""
     with get_db() as db:
-        upload_obj = db.query(Upload).filter(Upload.id == upload_id).first()
+        upload_obj = db.query(Upload).filter(Upload.id == upload_id, Upload.user_id == current_user.user_id).first()
         if not upload_obj:
-            raise HTTPException(status_code=404, detail="Upload not found")
+            raise HTTPException(status_code=404, detail="Upload not found or you don't have access")
 
         epics = db.query(Epic).filter(Epic.upload_id == upload_id).all()
         
@@ -62,10 +69,25 @@ def get_all_epics(
     page_size: int = Query(10, ge=1, le=100),
     sort_by: str = Query("created_at"),
     sort_order: str = Query("desc"),
+    current_user: TokenData = Depends(get_current_user),
 ):
-    """Get all epics across all uploads (paginated). Supports sorting by `id` or `created_at`."""
+    """Get all epics from user's uploads (paginated). Supports sorting by `id` or `created_at`."""
     with get_db() as db:
-        total_count = db.query(Epic).count()
+        # Get user's upload IDs
+        user_uploads = db.query(Upload.id).filter(Upload.user_id == current_user.user_id).all()
+        upload_ids = [u[0] for u in user_uploads]
+        
+        if not upload_ids:
+            return {
+                "message": "No uploads found for this user",
+                "total_epics": 0,
+                "current_page": page,
+                "page_size": page_size,
+                "total_pages": 0,
+                "epics": []
+            }
+        
+        total_count = db.query(Epic).filter(Epic.upload_id.in_(upload_ids)).count()
         offset = (page - 1) * page_size
         # choose column to sort by
         sort_by = (sort_by or "created_at").lower()
@@ -80,7 +102,7 @@ def get_all_epics(
         else:
             order_clause = col.desc()
 
-        epics = db.query(Epic).order_by(order_clause).offset(offset).limit(page_size).all()
+        epics = db.query(Epic).filter(Epic.upload_id.in_(upload_ids)).order_by(order_clause).offset(offset).limit(page_size).all()
 
         epic_list = []
         for epic in epics:
@@ -106,12 +128,12 @@ def get_all_epics(
         }
 
 @router.get("/epics/{upload_id}/{epic_id}")
-def get_epic_details(upload_id: int, epic_id: int):
+def get_epic_details(upload_id: int, epic_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get details of a specific epic"""
     with get_db() as db:
-        upload_obj = db.query(Upload).filter(Upload.id == upload_id).first()
+        upload_obj = db.query(Upload).filter(Upload.id == upload_id, Upload.user_id == current_user.user_id).first()
         if not upload_obj:
-            raise HTTPException(status_code=404, detail="Upload not found")
+            raise HTTPException(status_code=404, detail="Upload not found or you don't have access")
 
         epic = db.query(Epic).filter(
             Epic.id == epic_id,

@@ -1,6 +1,13 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+import sys
+from pathlib import Path
+
+# Add backend directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from models.file_model import Upload, Epic, QA
 from config.db import get_db
+from config.auth import get_current_user, TokenData
 import numpy as np
 import logging
 from sentence_transformers import SentenceTransformer
@@ -195,7 +202,8 @@ def _search_database_only(db, query, top_k):
 @router.get("/rag/search")
 def rag_search_database(
     query: str = Query(..., description=SEARCH_QUERY_DESC),
-    top_k: int = Query(5, ge=1, le=5, description="Number of top results to return (max 5)")
+    top_k: int = Query(5, ge=1, le=5, description="Number of top results to return (max 5)"),
+    current_user: TokenData = Depends(get_current_user),
 ):
     """
     Search through all uploads, epics, and test plans in DATABASE ONLY using semantic similarity.
@@ -251,7 +259,8 @@ def rag_search_database_post(
 @router.get("/rag/search-grouped")
 def rag_search_grouped_by_upload(
     query: str = Query(..., description=SEARCH_QUERY_DESC),
-    top_k: int = Query(5, ge=1, le=5, description="Number of top results to return (max 5)")
+    top_k: int = Query(5, ge=1, le=5, description="Number of top results to return (max 5)"),
+    current_user: TokenData = Depends(get_current_user),
 ):
     """
     Search database and return results grouped by upload (epics and uploads only).
