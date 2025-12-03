@@ -4,9 +4,13 @@ from config.gemini import generate_json
 from config.db import get_db
 from atlassian import Confluence
 from config.config import CONFLUENCE_URL, CONFLUENCE_USERNAME, CONFLUENCE_PASSWORD, CONFLUENCE_SPACE_KEY, CONFLUENCE_ROOT_FOLDER_ID
+from rag.vectorstore import VectorStore
 import datetime
+import json
+import uuid
 
 router = APIRouter()
+vectorstore = VectorStore()
 print("Confluence URL from config:", CONFLUENCE_URL)
 print("Confluence Username from config:", CONFLUENCE_USERNAME)
 print("Confluence Password from config:", CONFLUENCE_PASSWORD)
@@ -151,6 +155,19 @@ Requirement:
 
             db.commit()  # save epic with Confluence page ID
 
+            # Index epic in vectorstore for RAG
+            epic_text = f"Epic: {epic.name}\nDescription: {epic_data.get('description', '')}\nAcceptance Criteria: {', '.join(epic_data.get('acceptanceCriteria', []))}"
+            doc_id = f"epic_{epic.id}_{str(uuid.uuid4())[:8]}"
+            try:
+                vectorstore.store_document(epic_text, doc_id, metadata={
+                    "type": "epic",
+                    "epic_id": epic.id,
+                    "upload_id": upload_id,
+                    "epic_name": epic.name
+                })
+            except Exception as e:
+                print(f"Warning: Could not index epic in vectorstore: {e}")
+
             # Generate test plan under epic
             testplan_prompt = f"""
 Generate a detailed test plan only in STRICT JSON format.
@@ -197,6 +214,20 @@ Story:
                     raise HTTPException(status_code=500, detail=f"Confluence test plan creation error: {str(e)}")
 
                 db.commit()
+                
+                # Index test plan in vectorstore for RAG
+                testplan_text = f"Test Plan: {plan.get('title', '')}\nObjective: {plan.get('objective', '')}\nTest Scenarios: {', '.join(plan.get('testScenarios', []))}"
+                doc_id = f"testplan_{testplan_db.id}_{str(uuid.uuid4())[:8]}"
+                try:
+                    vectorstore.store_document(testplan_text, doc_id, metadata={
+                        "type": "test_plan",
+                        "qa_id": testplan_db.id,
+                        "epic_id": epic.id,
+                        "upload_id": upload_id
+                    })
+                except Exception as e:
+                    print(f"Warning: Could not index test plan in vectorstore: {e}")
+                
                 testplan_results.append({
                     "id": testplan_db.id,
                     "content": plan,

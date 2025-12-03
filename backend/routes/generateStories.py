@@ -2,8 +2,11 @@ from fastapi import APIRouter, HTTPException
 from models.file_model import Epic, Story
 from config.gemini import generate_json
 from config.db import get_db
+from rag.vectorstore import VectorStore
+import uuid
 
 router = APIRouter()
+vectorstore = VectorStore()
 
 @router.post("/generate-stories/{epic_id}")
 def generate_stories(epic_id: int):
@@ -51,6 +54,20 @@ Epic content:
             )
             db.add(story)
             db.flush()  # assigns ID
+            
+            # Index story in vectorstore for RAG
+            story_text = f"Story: {story.name}\nType: {story_item.get('type', '')}\nDescription: {story_item.get('description', '')}\nAcceptance Criteria: {', '.join(story_item.get('acceptanceCriteria', []))}"
+            doc_id = f"story_{story.id}_{str(uuid.uuid4())[:8]}"
+            try:
+                vectorstore.store_document(story_text, doc_id, metadata={
+                    "type": "story",
+                    "story_id": story.id,
+                    "epic_id": epic_obj.id,
+                    "story_name": story.name
+                })
+            except Exception as e:
+                print(f"Warning: Could not index story in vectorstore: {e}")
+            
             response_array.append({
                 "id": story.id,
                 "story": story_item

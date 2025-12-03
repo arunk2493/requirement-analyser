@@ -2,10 +2,13 @@ from fastapi import APIRouter, HTTPException
 from models.file_model import Story, QA
 from config.gemini import generate_json
 from config.db import get_db
+from rag.vectorstore import VectorStore
 import json
 import re
+import uuid
 
 router = APIRouter()
+vectorstore = VectorStore()
 
 def safe_parse_json(output):
     """
@@ -80,6 +83,18 @@ User Story:
             )
             db.add(qa_obj)
             db.flush()
+            
+            # Index QA test in vectorstore for RAG
+            qa_text = f"QA Test: {qa_item.get('title', '')}\nAPI Endpoint: {qa_item.get('apiEndpoint', '')}\nMethod: {qa_item.get('method', '')}\nValidation Steps: {', '.join(qa_item.get('validationSteps', []))}"
+            doc_id = f"qa_{qa_obj.id}_{str(uuid.uuid4())[:8]}"
+            try:
+                vectorstore.store_document(qa_text, doc_id, metadata={
+                    "type": "qa",
+                    "qa_id": qa_obj.id,
+                    "story_id": story_id
+                })
+            except Exception as e:
+                print(f"Warning: Could not index QA in vectorstore: {e}")
 
             saved_tests.append({
                 "id": qa_obj.id,

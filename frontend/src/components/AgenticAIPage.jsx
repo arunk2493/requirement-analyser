@@ -1,429 +1,365 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import axios from "axios";
-import { Card } from "primereact/card";
-import { Button } from "primereact/button";
-import { InputNumber } from "primereact/inputnumber";
-import { InputText } from "primereact/inputtext";
-import { Toast } from "primereact/toast";
-import { ProgressSpinner } from "primereact/progressspinner";
-import { Divider } from "primereact/divider";
-import { TabView, TabPanel } from "primereact/tabview";
-import { DataTable } from "primereact/datatable";
-import { Column } from "primereact/column";
-import { useRef } from "react";
+import { FaRobot, FaSpinner, FaExternalLinkAlt, FaSync, FaCheckCircle, FaExclamationCircle, FaArrowRight } from "react-icons/fa";
 
 const API_BASE = "http://localhost:8000";
 
 export default function AgenticAIPage() {
-  const [uploadId, setUploadId] = useState(null);
-  const [epicId, setEpicId] = useState(null);
-  const [storyId, setStoryId] = useState(null);
+  const [uploadId, setUploadId] = useState("");
+  const [epicId, setEpicId] = useState("");
+  const [storyId, setStoryId] = useState("");
   const [ragQuery, setRagQuery] = useState("");
 
   const [loadingEpics, setLoadingEpics] = useState(false);
   const [loadingStories, setLoadingStories] = useState(false);
   const [loadingQA, setLoadingQA] = useState(false);
   const [loadingRAG, setLoadingRAG] = useState(false);
-  const [loadingWorkflow, setLoadingWorkflow] = useState(false);
 
-  const [epics, setEpics] = useState([]);
-  const [stories, setStories] = useState([]);
-  const [qaTests, setQATests] = useState([]);
+  const [generatedEpics, setGeneratedEpics] = useState([]);
+  const [generatedStories, setGeneratedStories] = useState([]);
+  const [generatedQA, setGeneratedQA] = useState([]);
   const [ragResults, setRagResults] = useState([]);
 
-  const toastRef = useRef(null);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const showToast = (severity, summary, detail) => {
-    toastRef.current?.show({ severity, summary, detail, life: 3000 });
+  const showMessage = (type, message) => {
+    if (type === "success") {
+      setSuccessMessage(message);
+      setErrorMessage("");
+      setTimeout(() => setSuccessMessage(""), 4000);
+    } else {
+      setErrorMessage(message);
+      setSuccessMessage("");
+      setTimeout(() => setErrorMessage(""), 4000);
+    }
   };
 
   // Generate Epics
-  const onGenerateEpics = async () => {
+  const handleGenerateEpics = async () => {
     if (!uploadId) {
-      showToast("error", "Error", "Please enter an Upload ID");
+      showMessage("error", "Please enter an Upload ID");
       return;
     }
     try {
       setLoadingEpics(true);
       const res = await axios.post(`${API_BASE}/agents/epic/generate`, {
-        upload_id: uploadId,
+        upload_id: parseInt(uploadId),
       });
-      setEpics(res.data.data?.epics || []);
-      showToast("success", "Success", res.data.message);
+      setGeneratedEpics(res.data.data?.epics || []);
+      showMessage("success", "✅ Epics generated successfully!");
     } catch (e) {
-      showToast("error", "Error", e.response?.data?.detail || e.message);
+      showMessage("error", e.response?.data?.detail || "Failed to generate epics");
     } finally {
       setLoadingEpics(false);
     }
   };
 
   // Generate Stories
-  const onGenerateStories = async () => {
+  const handleGenerateStories = async () => {
     if (!epicId) {
-      showToast("error", "Error", "Please enter an Epic ID");
+      showMessage("error", "Please enter an Epic ID");
       return;
     }
     try {
       setLoadingStories(true);
       const res = await axios.post(`${API_BASE}/agents/story/generate`, {
-        epic_id: epicId,
+        epic_id: parseInt(epicId),
       });
-      setStories(res.data.data?.stories || []);
-      showToast("success", "Success", res.data.message);
+      setGeneratedStories(res.data.data?.stories || []);
+      showMessage("success", "✅ Stories generated successfully!");
     } catch (e) {
-      showToast("error", "Error", e.response?.data?.detail || e.message);
+      showMessage("error", e.response?.data?.detail || "Failed to generate stories");
     } finally {
       setLoadingStories(false);
     }
   };
 
   // Generate QA
-  const onGenerateQA = async () => {
+  const handleGenerateQA = async () => {
     if (!storyId) {
-      showToast("error", "Error", "Please enter a Story ID");
+      showMessage("error", "Please enter a Story ID");
       return;
     }
     try {
       setLoadingQA(true);
       const res = await axios.post(`${API_BASE}/agents/qa/generate`, {
-        story_id: storyId,
+        story_id: parseInt(storyId),
       });
-      setQATests(res.data.data?.qa_tests || []);
-      showToast("success", "Success", res.data.message);
+      setGeneratedQA(res.data.data?.qa_tests || []);
+      showMessage("success", "✅ QA tests generated successfully!");
     } catch (e) {
-      showToast("error", "Error", e.response?.data?.detail || e.message);
+      showMessage("error", e.response?.data?.detail || "Failed to generate QA tests");
     } finally {
       setLoadingQA(false);
     }
   };
 
   // RAG Search
-  const onRAGSearch = async () => {
+  const handleRAGSearch = async () => {
     if (!ragQuery) {
-      showToast("error", "Error", "Please enter a search query");
+      showMessage("error", "Please enter a search query");
       return;
     }
     try {
       setLoadingRAG(true);
       const res = await axios.post(`${API_BASE}/agents/rag/search`, {
         query: ragQuery,
-        upload_id: uploadId || null,
+        upload_id: uploadId ? parseInt(uploadId) : null,
         top_k: 5,
       });
       setRagResults(res.data.data?.documents || []);
-      showToast("success", "Success", res.data.message);
+      showMessage("success", "✅ Documents retrieved successfully!");
     } catch (e) {
-      showToast("error", "Error", e.response?.data?.detail || e.message);
+      showMessage("error", e.response?.data?.detail || "Failed to retrieve documents");
     } finally {
       setLoadingRAG(false);
     }
   };
 
-  // Execute Full Workflow
-  const onExecuteWorkflow = async () => {
-    if (!uploadId) {
-      showToast("error", "Error", "Please enter an Upload ID");
-      return;
-    }
-    try {
-      setLoadingWorkflow(true);
-      const res = await axios.post(`${API_BASE}/agents/workflow/execute`, {
-        upload_id: uploadId,
-      });
-      const workflowData = res.data.data;
-      setEpics(workflowData.epics || []);
-      setStories(workflowData.stories || []);
-      setQATests(workflowData.qa || []);
-      showToast("success", "Success", res.data.message);
-    } catch (e) {
-      showToast("error", "Error", e.response?.data?.detail || e.message);
-    } finally {
-      setLoadingWorkflow(false);
-    }
-  };
-
   return (
-    <div className="p-4">
-      <Toast ref={toastRef} />
-
-      <div className="mb-4">
-        <h1 className="text-3xl font-bold">Agentic AI Requirement Analyzer</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3">
+          <FaRobot className="text-4xl text-blue-600" />
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">🤖 Agentic AI</h1>
+        </div>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Use specialized agents to generate epics, stories, QA tests, and retrieve documents from RAG
+          Use specialized agents to generate epics, stories, and QA tests from your requirements
         </p>
       </div>
 
-      <TabView>
-        {/* Epic Generation */}
-        <TabPanel header="Generate Epics" leftIcon="pi pi-book">
-          <Card className="mb-4">
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="block font-semibold mb-2">Upload ID</label>
-                <InputNumber
-                  value={uploadId}
-                  onValueChange={(e) => setUploadId(e.value)}
-                  placeholder="Enter upload ID"
-                  className="w-full"
-                />
-              </div>
+      {/* Messages */}
+      {successMessage && (
+        <div className="mb-6 p-4 bg-green-50 dark:bg-green-900 border-l-4 border-green-500 rounded-lg">
+          <p className="text-green-700 dark:text-green-100 flex items-center gap-2">
+            <FaCheckCircle /> {successMessage}
+          </p>
+        </div>
+      )}
 
-              <Button
-                label="Generate Epics"
-                icon="pi pi-play"
-                onClick={onGenerateEpics}
-                loading={loadingEpics}
-                disabled={!uploadId || loadingEpics}
-                className="p-button-primary"
+      {errorMessage && (
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900 border-l-4 border-red-500 rounded-lg">
+          <p className="text-red-700 dark:text-red-100 flex items-center gap-2">
+            <FaExclamationCircle /> {errorMessage}
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Generate Epics Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-purple-600 mb-4">📚 Generate Epics</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Upload ID
+              </label>
+              <input
+                type="number"
+                value={uploadId}
+                onChange={(e) => setUploadId(e.target.value)}
+                placeholder="Enter upload ID"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
               />
-
-              {epics.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="font-semibold mb-2">Generated Epics</h3>
-                  <DataTable value={epics} responsiveLayout="scroll">
-                    <Column field="id" header="ID" />
-                    <Column field="name" header="Name" />
-                    <Column
-                      field="confluence_page_url"
-                      header="Confluence Link"
-                      body={(rowData) =>
-                        rowData.confluence_page_url ? (
-                          <a
-                            href={rowData.confluence_page_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 underline"
-                          >
-                            View
-                          </a>
-                        ) : (
-                          "N/A"
-                        )
-                      }
-                    />
-                  </DataTable>
-                </div>
-              )}
             </div>
-          </Card>
-        </TabPanel>
+            <button
+              onClick={handleGenerateEpics}
+              disabled={loadingEpics || !uploadId}
+              className="w-full px-4 py-2 bg-purple-500 hover:bg-purple-600 disabled:bg-purple-400 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
+            >
+              {loadingEpics ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}
+              {loadingEpics ? "Generating..." : "Generate Epics"}
+            </button>
+          </div>
 
-        {/* Story Generation */}
-        <TabPanel header="Generate Stories" leftIcon="pi pi-list">
-          <Card className="mb-4">
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="block font-semibold mb-2">Epic ID</label>
-                <InputNumber
-                  value={epicId}
-                  onValueChange={(e) => setEpicId(e.value)}
-                  placeholder="Enter epic ID"
-                  className="w-full"
-                />
-              </div>
-
-              <Button
-                label="Generate Stories"
-                icon="pi pi-play"
-                onClick={onGenerateStories}
-                loading={loadingStories}
-                disabled={!epicId || loadingStories}
-                className="p-button-primary"
-              />
-
-              {stories.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="font-semibold mb-2">Generated Stories</h3>
-                  <DataTable value={stories} responsiveLayout="scroll">
-                    <Column field="id" header="ID" />
-                    <Column field="name" header="Name" />
-                    <Column
-                      field="content"
-                      header="Content"
-                      body={(rowData) =>
-                        <span className="text-sm line-clamp-2">
-                          {JSON.stringify(rowData.content).substring(0, 100)}...
-                        </span>
-                      }
-                    />
-                  </DataTable>
-                </div>
-              )}
-            </div>
-          </Card>
-        </TabPanel>
-
-        {/* QA Generation */}
-        <TabPanel header="Generate QA" leftIcon="pi pi-check-square">
-          <Card className="mb-4">
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="block font-semibold mb-2">Story ID</label>
-                <InputNumber
-                  value={storyId}
-                  onValueChange={(e) => setStoryId(e.value)}
-                  placeholder="Enter story ID"
-                  className="w-full"
-                />
-              </div>
-
-              <Button
-                label="Generate QA Tests"
-                icon="pi pi-play"
-                onClick={onGenerateQA}
-                loading={loadingQA}
-                disabled={!storyId || loadingQA}
-                className="p-button-primary"
-              />
-
-              {qaTests.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="font-semibold mb-2">Generated QA Tests</h3>
-                  <DataTable value={qaTests} responsiveLayout="scroll">
-                    <Column field="id" header="ID" />
-                    <Column field="title" header="Title" />
-                    <Column
-                      field="content"
-                      header="Content Preview"
-                      body={(rowData) =>
-                        <span className="text-sm line-clamp-2">
-                          {JSON.stringify(rowData.content).substring(0, 100)}...
-                        </span>
-                      }
-                    />
-                  </DataTable>
-                </div>
-              )}
-            </div>
-          </Card>
-        </TabPanel>
-
-        {/* RAG Retrieval */}
-        <TabPanel header="RAG Search" leftIcon="pi pi-search">
-          <Card className="mb-4">
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="block font-semibold mb-2">Search Query</label>
-                <InputText
-                  value={ragQuery}
-                  onChange={(e) => setRagQuery(e.target.value)}
-                  placeholder="Enter search query"
-                  className="w-full"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold mb-2">Upload ID (Optional)</label>
-                <InputNumber
-                  value={uploadId}
-                  onValueChange={(e) => setUploadId(e.value)}
-                  placeholder="Filter by upload ID"
-                  className="w-full"
-                />
-              </div>
-
-              <Button
-                label="Search Documents"
-                icon="pi pi-search"
-                onClick={onRAGSearch}
-                loading={loadingRAG}
-                disabled={!ragQuery || loadingRAG}
-                className="p-button-primary"
-              />
-
-              {ragResults.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="font-semibold mb-2">Retrieved Documents</h3>
-                  <div className="space-y-3">
-                    {ragResults.map((doc, idx) => (
-                      <Card key={idx} className="p-3 bg-blue-50 dark:bg-blue-900">
-                        <p className="text-sm font-semibold mb-1">Document {idx + 1}</p>
-                        <p className="text-sm mb-2">{doc.content || "No content"}</p>
-                        <p className="text-xs text-gray-600">
-                          Similarity: {(doc.similarity || 0).toFixed(3)}
-                        </p>
-                      </Card>
+          {generatedEpics.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Generated Epics ({generatedEpics.length})</h3>
+              <div className="overflow-x-auto rounded-lg">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-purple-100 dark:bg-purple-900">
+                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">ID</th>
+                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">Name</th>
+                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">Link</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generatedEpics.slice(0, 5).map((epic) => (
+                      <tr key={epic.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-purple-50 dark:hover:bg-gray-700">
+                        <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{epic.id}</td>
+                        <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{epic.name}</td>
+                        <td className="px-4 py-2">
+                          {epic.confluence_page_url ? (
+                            <a
+                              href={epic.confluence_page_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded text-xs transition"
+                            >
+                              <FaExternalLinkAlt /> View
+                            </a>
+                          ) : (
+                            <span className="text-gray-400">N/A</span>
+                          )}
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </Card>
-        </TabPanel>
-
-        {/* Workflow Execution */}
-        <TabPanel header="Full Workflow" leftIcon="pi pi-play">
-          <Card className="mb-4">
-            <div className="flex flex-col gap-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Execute the complete workflow: Upload → Generate Epics → Generate Stories → Generate QA
-              </p>
-
-              <div>
-                <label className="block font-semibold mb-2">Upload ID</label>
-                <InputNumber
-                  value={uploadId}
-                  onValueChange={(e) => setUploadId(e.value)}
-                  placeholder="Enter upload ID"
-                  className="w-full"
-                />
+                  </tbody>
+                </table>
               </div>
-
-              <Button
-                label="Execute Full Workflow"
-                icon="pi pi-arrow-right"
-                onClick={onExecuteWorkflow}
-                loading={loadingWorkflow}
-                disabled={!uploadId || loadingWorkflow}
-                className="p-button-success p-button-lg"
-              />
-
-              {loadingWorkflow && (
-                <div className="flex justify-center mt-4">
-                  <ProgressSpinner />
-                </div>
-              )}
-
-              {(epics.length > 0 || stories.length > 0 || qaTests.length > 0) && (
-                <div className="mt-6 space-y-4">
-                  <Divider />
-                  <h3 className="font-semibold text-lg">Workflow Results</h3>
-
-                  {epics.length > 0 && (
-                    <Card className="p-3 bg-purple-50 dark:bg-purple-900">
-                      <h4 className="font-semibold mb-2">Epics ({epics.length})</h4>
-                      <DataTable value={epics.slice(0, 3)} responsiveLayout="scroll">
-                        <Column field="id" header="ID" />
-                        <Column field="name" header="Name" />
-                      </DataTable>
-                    </Card>
-                  )}
-
-                  {stories.length > 0 && (
-                    <Card className="p-3 bg-green-50 dark:bg-green-900">
-                      <h4 className="font-semibold mb-2">Stories ({stories.length})</h4>
-                      <DataTable value={stories.slice(0, 3)} responsiveLayout="scroll">
-                        <Column field="id" header="ID" />
-                        <Column field="name" header="Name" />
-                      </DataTable>
-                    </Card>
-                  )}
-
-                  {qaTests.length > 0 && (
-                    <Card className="p-3 bg-blue-50 dark:bg-blue-900">
-                      <h4 className="font-semibold mb-2">QA Tests ({qaTests.length})</h4>
-                      <DataTable value={qaTests.slice(0, 3)} responsiveLayout="scroll">
-                        <Column field="id" header="ID" />
-                        <Column field="title" header="Title" />
-                      </DataTable>
-                    </Card>
-                  )}
-                </div>
-              )}
             </div>
-          </Card>
-        </TabPanel>
-      </TabView>
+          )}
+        </div>
+
+        {/* Generate Stories Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-green-600 mb-4">📖 Generate Stories</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Epic ID
+              </label>
+              <input
+                type="number"
+                value={epicId}
+                onChange={(e) => setEpicId(e.target.value)}
+                placeholder="Enter epic ID"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none"
+              />
+            </div>
+            <button
+              onClick={handleGenerateStories}
+              disabled={loadingStories || !epicId}
+              className="w-full px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-green-400 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
+            >
+              {loadingStories ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}
+              {loadingStories ? "Generating..." : "Generate Stories"}
+            </button>
+          </div>
+
+          {generatedStories.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Generated Stories ({generatedStories.length})</h3>
+              <div className="overflow-x-auto rounded-lg">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-green-100 dark:bg-green-900">
+                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">ID</th>
+                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">Name</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generatedStories.slice(0, 5).map((story) => (
+                      <tr key={story.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-green-50 dark:hover:bg-gray-700">
+                        <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{story.id}</td>
+                        <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{story.name || "Untitled"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Generate QA Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-blue-600 mb-4">✅ Generate QA Tests</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Story ID
+              </label>
+              <input
+                type="number"
+                value={storyId}
+                onChange={(e) => setStoryId(e.target.value)}
+                placeholder="Enter story ID"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <button
+              onClick={handleGenerateQA}
+              disabled={loadingQA || !storyId}
+              className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
+            >
+              {loadingQA ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}
+              {loadingQA ? "Generating..." : "Generate QA Tests"}
+            </button>
+          </div>
+
+          {generatedQA.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Generated QA Tests ({generatedQA.length})</h3>
+              <div className="overflow-x-auto rounded-lg">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-blue-100 dark:bg-blue-900">
+                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">ID</th>
+                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">Title</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generatedQA.slice(0, 5).map((qa) => (
+                      <tr key={qa.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700">
+                        <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{qa.id}</td>
+                        <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{qa.title || "Untitled"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RAG Search Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-orange-600 mb-4">🔍 RAG Search</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Search Query
+              </label>
+              <input
+                type="text"
+                value={ragQuery}
+                onChange={(e) => setRagQuery(e.target.value)}
+                placeholder="Enter search query"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+              />
+            </div>
+            <button
+              onClick={handleRAGSearch}
+              disabled={loadingRAG || !ragQuery}
+              className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
+            >
+              {loadingRAG ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}
+              {loadingRAG ? "Searching..." : "Search Documents"}
+            </button>
+          </div>
+
+          {ragResults.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Retrieved Documents ({ragResults.length})</h3>
+              <div className="space-y-3">
+                {ragResults.slice(0, 3).map((doc, idx) => (
+                  <div key={idx} className="p-3 bg-orange-50 dark:bg-orange-900 rounded-lg border border-orange-200 dark:border-orange-700">
+                    <p className="text-xs font-semibold text-orange-600 dark:text-orange-300 mb-1">Document {idx + 1}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{doc.text || doc.content || "No content"}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                      Similarity: {(doc.similarity || 0).toFixed(3)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
