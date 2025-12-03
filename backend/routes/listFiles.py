@@ -1,11 +1,18 @@
-from fastapi import APIRouter
+import sys
+from pathlib import Path
+
+# Add backend directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from fastapi import APIRouter, Depends
 from config.db import get_db
+from config.auth import get_current_user, TokenData
 from models.file_model import Upload, Epic, Story, QA, AggregatedUpload
 
 router = APIRouter()
 
 @router.get("/list-files")
-def list_files():
+def list_files(current_user: TokenData = Depends(get_current_user)):
     with get_db() as db:
         uploads = db.query(Upload).all()
         result = []

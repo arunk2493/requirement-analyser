@@ -1,7 +1,14 @@
-from fastapi import APIRouter, HTTPException
+import sys
+from pathlib import Path
+
+# Add backend directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from fastapi import APIRouter, HTTPException, Depends
 from models.file_model import Story, QA
 from config.gemini import generate_json
 from config.db import get_db
+from config.auth import get_current_user, TokenData
 from rag.vectorstore import VectorStore
 import json
 import re
@@ -41,7 +48,7 @@ def safe_parse_json(output):
 
 
 @router.post("/generate-qa/{story_id}")
-def generate_qa(story_id: int):
+def generate_qa(story_id: int, current_user: TokenData = Depends(get_current_user)):
     with get_db() as db:
         story_obj = db.query(Story).filter(Story.id == story_id).first()
         if not story_obj:

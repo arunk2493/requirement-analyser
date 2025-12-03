@@ -1,7 +1,14 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query, Depends
+import sys
+from pathlib import Path
+
+# Add backend directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from models.file_model import Upload, Epic
 from config.db import get_db
 from config.config import CONFLUENCE_URL
+from config.auth import get_current_user, TokenData
 from rag.vectorstore import VectorStore
 from PyPDF2 import PdfReader
 from docx import Document
@@ -29,7 +36,10 @@ def get_confluence_page_url(page_id: str) -> Optional[str]:
     return f"{base}/pages/viewpage.action?pageId={pid}"
 
 @router.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(
+    file: UploadFile = File(...),
+    current_user: TokenData = Depends(get_current_user),
+):
     try:
         # Extract text from file
         if file.filename.endswith(".pdf"):
@@ -91,7 +101,11 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 @router.get("/uploads")
-def get_all_uploads(page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=100)):
+def get_all_uploads(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    current_user: TokenData = Depends(get_current_user),
+):
     """Get all uploaded files with pagination. Returns file info with first epic's Confluence link if available."""
     try:
         with get_db() as db:

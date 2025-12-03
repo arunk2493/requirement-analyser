@@ -1,7 +1,14 @@
-from fastapi import APIRouter, HTTPException
+import sys
+from pathlib import Path
+
+# Add backend directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from fastapi import APIRouter, HTTPException, Depends
 from models.file_model import Story, QA, Epic
 from config.gemini import generate_json
 from config.db import get_db
+from config.auth import get_current_user, TokenData
 from atlassian import Confluence
 import datetime
 
@@ -46,7 +53,7 @@ def create_testplan_page(title: str, content: dict, parent_id: str):
 
 
 @router.post("/generate-testplan/{story_id}")
-def generate_testplan(story_id: int):
+def generate_testplan(story_id: int, current_user: TokenData = Depends(get_current_user)):
     with get_db() as db:
         # Fetch story
         story_obj = db.query(Story).filter(Story.id == story_id).first()

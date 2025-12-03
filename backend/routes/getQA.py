@@ -1,11 +1,18 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+import sys
+from pathlib import Path
+
+# Add backend directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from models.file_model import Story, QA
 from config.db import get_db
+from config.auth import get_current_user, TokenData
 
 router = APIRouter()
 
 @router.get("/qa/{story_id}")
-def get_qa(story_id: int):
+def get_qa(story_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get all QA test cases for a given story"""
     with get_db() as db:
         story_obj = db.query(Story).filter(Story.id == story_id).first()
@@ -37,7 +44,7 @@ def get_qa(story_id: int):
         }
 
 @router.get("/qa/{story_id}/{qa_id}")
-def get_qa_details(story_id: int, qa_id: int):
+def get_qa_details(story_id: int, qa_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get details of a specific QA test case"""
     with get_db() as db:
         story_obj = db.query(Story).filter(Story.id == story_id).first()
@@ -69,6 +76,7 @@ def get_all_qa(
     page_size: int = Query(10, ge=1, le=100),
     sort_by: str = Query("created_at"),
     sort_order: str = Query("desc"),
+    current_user: TokenData = Depends(get_current_user),
 ):
     """Get all QA test cases across all stories (paginated). Supports sorting by `id` or `created_at`."""
     with get_db() as db:

@@ -1,5 +1,12 @@
-from fastapi import APIRouter, HTTPException
+import sys
+from pathlib import Path
+
+# Add backend directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from fastapi import APIRouter, HTTPException, Depends
 from agents.agent_coordinator import AgentCoordinator
+from config.auth import get_current_user, TokenData
 from pydantic import BaseModel
 from typing import Optional
 
@@ -34,7 +41,7 @@ class WorkflowExecutionRequest(BaseModel):
 
 
 @router.post("/epic/generate")
-def generate_epics_endpoint(request: EpicGenerationRequest):
+def generate_epics_endpoint(request: EpicGenerationRequest, current_user: TokenData = Depends(get_current_user)):
     """Generate epics from uploaded requirements using EpicAgent"""
     response = coordinator.generate_epics(request.upload_id)
     if not response.success:
@@ -46,7 +53,7 @@ def generate_epics_endpoint(request: EpicGenerationRequest):
 
 
 @router.post("/story/generate")
-def generate_stories_endpoint(request: StoryGenerationRequest):
+def generate_stories_endpoint(request: StoryGenerationRequest, current_user: TokenData = Depends(get_current_user)):
     """Generate stories from an epic using StoryAgent"""
     response = coordinator.generate_stories(request.epic_id)
     if not response.success:
@@ -58,7 +65,7 @@ def generate_stories_endpoint(request: StoryGenerationRequest):
 
 
 @router.post("/qa/generate")
-def generate_qa_endpoint(request: QAGenerationRequest):
+def generate_qa_endpoint(request: QAGenerationRequest, current_user: TokenData = Depends(get_current_user)):
     """Generate QA test cases from a story using QAAgent"""
     response = coordinator.generate_qa(request.story_id)
     if not response.success:
@@ -70,7 +77,7 @@ def generate_qa_endpoint(request: QAGenerationRequest):
 
 
 @router.post("/testplan/generate")
-def generate_testplan_endpoint(request: TestPlanGenerationRequest):
+def generate_testplan_endpoint(request: TestPlanGenerationRequest, current_user: TokenData = Depends(get_current_user)):
     """Generate test plan from an epic using TestPlanAgent"""
     response = coordinator.generate_testplan(request.epic_id)
     if not response.success:
