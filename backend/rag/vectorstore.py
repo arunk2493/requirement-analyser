@@ -36,25 +36,45 @@ class VectorStore:
     def _init_sample_documents(self):
         """Initialize with sample documents for demo purposes"""
         sample_docs = {
-            "sample_1": {
-                "text": "User authentication feature: Implement secure login with email and password. Accept criteria: User can login with valid credentials, invalid credentials show error message, remember me option for 30 days.",
-                "metadata": {"type": "epic", "category": "authentication"}
+            "doc_auth_login": {
+                "text": "Authentication and Login Feature: Users must be able to log in using email and password. The system should validate credentials against the database, handle invalid login attempts with appropriate error messages, support password reset functionality, and implement session management with secure token-based authentication.",
+                "metadata": {"type": "epic", "category": "authentication", "name": "Login Feature"}
             },
-            "sample_2": {
-                "text": "API endpoint for user registration: POST /api/users/register with email, password, name. Response includes user ID and auth token. Validation for email format and password strength.",
-                "metadata": {"type": "story", "category": "api"}
+            "doc_auth_mfa": {
+                "text": "Multi-Factor Authentication: Implement two-factor authentication for enhanced security. Support OTP via email, SMS, and authenticator apps. Users can enable/disable MFA in account settings. Recovery codes should be provided for account recovery. All authentication attempts should be logged.",
+                "metadata": {"type": "epic", "category": "security", "name": "MFA System"}
             },
-            "sample_3": {
-                "text": "Database schema migration: Create users table with id, email, password_hash, created_at, updated_at. Add indexes on email for faster lookups. Support for role-based access control.",
-                "metadata": {"type": "implementation", "category": "database"}
+            "doc_api_users": {
+                "text": "User Management API: Create REST endpoints for user CRUD operations. Endpoints: POST /api/users/register, GET /api/users/{id}, PUT /api/users/{id}, DELETE /api/users/{id}. Each endpoint should validate input, check authorization, and return standardized JSON responses with proper HTTP status codes.",
+                "metadata": {"type": "story", "category": "api", "name": "User API Endpoints"}
             },
-            "sample_4": {
-                "text": "QA Test: Login with valid email and password, verify token is returned, check token validity. Test invalid email format rejection, test password strength requirements.",
-                "metadata": {"type": "qa", "category": "testing"}
+            "doc_api_auth": {
+                "text": "Authentication API Endpoints: Implement POST /api/auth/login, POST /api/auth/logout, POST /api/auth/refresh-token, POST /api/auth/verify-email. All endpoints must validate requests, handle errors gracefully, and return JWT tokens with appropriate expiration times.",
+                "metadata": {"type": "story", "category": "api", "name": "Auth Endpoints"}
             },
-            "sample_5": {
-                "text": "Two-factor authentication feature: Send OTP via email after login, verify OTP before granting access. Support TOTP apps like Google Authenticator. Recovery codes for backup access.",
-                "metadata": {"type": "epic", "category": "security"}
+            "doc_db_schema": {
+                "text": "Database Schema Design: Create tables for users with fields: id (primary key), email (unique), password_hash, first_name, last_name, created_at, updated_at. Add indexes on email and created_at for performance. Implement foreign key relationships for user roles and permissions.",
+                "metadata": {"type": "implementation", "category": "database", "name": "User Database Schema"}
+            },
+            "doc_db_security": {
+                "text": "Database Security: Implement row-level security policies. Use prepared statements to prevent SQL injection. Encrypt sensitive data at rest. Enable audit logging for all database changes. Regular backups should be automated with encryption.",
+                "metadata": {"type": "implementation", "category": "database", "name": "Security Policies"}
+            },
+            "doc_qa_login": {
+                "text": "QA Test Cases for Login: Test valid credentials, invalid email format, incorrect password, account lockout after failed attempts, password reset flow, remember me functionality, session timeout, and concurrent login handling.",
+                "metadata": {"type": "qa", "category": "testing", "name": "Login Test Suite"}
+            },
+            "doc_qa_api": {
+                "text": "API Testing: Test all endpoints with valid/invalid inputs, verify response status codes, validate JSON schema compliance, test rate limiting, verify authentication headers, test error messages, performance testing with load testing.",
+                "metadata": {"type": "qa", "category": "testing", "name": "API Test Coverage"}
+            },
+            "doc_performance": {
+                "text": "Performance Requirements: Login must complete within 500ms. API response time should be under 1 second for all endpoints. Database queries must be optimized with appropriate indexes. Implement caching for frequently accessed data. Support at least 1000 concurrent users.",
+                "metadata": {"type": "epic", "category": "performance", "name": "Performance SLA"}
+            },
+            "doc_deployment": {
+                "text": "Deployment Strategy: Use containerized deployment with Docker. Implement CI/CD pipeline using GitHub Actions. Automated testing before production deployment. Blue-green deployment strategy for zero-downtime updates. Health checks and monitoring with alerts.",
+                "metadata": {"type": "implementation", "category": "devops", "name": "Deployment Pipeline"}
             }
         }
         

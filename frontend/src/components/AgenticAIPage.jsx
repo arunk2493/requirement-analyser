@@ -318,7 +318,7 @@ export default function AgenticAIPage() {
 
         {/* RAG Search Card */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-orange-600 mb-4">🔍 RAG Search</h2>
+          <h2 className="text-2xl font-bold text-orange-600 mb-4">🔍 Search Similar Documents</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -344,17 +344,45 @@ export default function AgenticAIPage() {
 
           {ragResults.length > 0 && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Retrieved Documents ({ragResults.length})</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Retrieved Documents ({ragResults.length})</h3>
               <div className="space-y-3">
-                {ragResults.slice(0, 3).map((doc, idx) => (
-                  <div key={idx} className="p-3 bg-orange-50 dark:bg-orange-900 rounded-lg border border-orange-200 dark:border-orange-700">
-                    <p className="text-xs font-semibold text-orange-600 dark:text-orange-300 mb-1">Document {idx + 1}</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{doc.text || doc.content || "No content"}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                      Similarity: {(doc.similarity || 0).toFixed(3)}
-                    </p>
-                  </div>
-                ))}
+                {ragResults.map((doc, idx) => {
+                  const docType = doc.metadata?.type || "document";
+                  const displayTitle = doc.metadata?.name || doc.metadata?.epic_name || doc.metadata?.story_name || `${docType.charAt(0).toUpperCase() + docType.slice(1)} ${idx + 1}`;
+                  const similarity = ((doc.similarity || 0) * 100).toFixed(1);
+                  
+                  // Color code based on similarity
+                  let matchColor = "bg-red-100 dark:bg-red-900 border-red-300 dark:border-red-700";
+                  if (similarity > 70) matchColor = "bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700";
+                  else if (similarity > 50) matchColor = "bg-yellow-100 dark:bg-yellow-900 border-yellow-300 dark:border-yellow-700";
+                  
+                  return (
+                    <div key={idx} className={`p-4 rounded-lg border transition hover:shadow-md ${matchColor}`}>
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white">
+                            {displayTitle}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="text-xs px-2 py-0.5 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full font-medium capitalize">
+                              {docType}
+                            </span>
+                            <span className={`text-xs font-bold px-3 py-0.5 rounded-full ${
+                              similarity > 70 ? 'bg-green-500 text-white' : 
+                              similarity > 50 ? 'bg-yellow-500 text-white' : 
+                              'bg-red-500 text-white'
+                            }`}>
+                              {similarity}% match
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3 leading-relaxed mt-2">
+                        {doc.text || doc.content || "No content available"}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
