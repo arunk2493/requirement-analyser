@@ -3,24 +3,46 @@ import numpy as np
 import os
 import json
 import logging
+import uuid
 from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
 
 class VectorStore:
-    """Vector store for RAG system using JSON storage"""
+    """Vector store for RAG system using JSON storage with per-upload support"""
     
-    def __init__(self, store_path: str = "storage/vectorstore.json"):
-        self.store_path = store_path
+    def __init__(self, store_path: str = "storage/vectorstore.json", upload_id: str = None):
+        """
+        Initialize vector store.
+        
+        Args:
+            store_path: Base path for vector stores
+            upload_id: Optional upload ID for per-upload vector stores. 
+                      If provided, creates a unique store path for this upload.
+        """
+        if upload_id:
+            # Create per-upload vector store path
+            self.upload_id = str(upload_id)
+            base_dir = os.path.dirname(store_path) or "storage"
+            self.store_path = os.path.join(base_dir, f"vectorstore_upload_{upload_id}.json")
+        else:
+            self.store_path = store_path
+            self.upload_id = None
+            
         self.model = SentenceTransformer("all-MiniLM-L6-v2")
         self.data = self._load_store()
         
-        # Initialize with sample documents if empty
-        if not self.data:
+        # Initialize with sample documents only if default store and empty
+        if not self.data and upload_id is None:
             self._init_sample_documents()
         
-        logger.info(f"Initialized VectorStore at {store_path} with {len(self.data)} documents")
+        logger.info(f"Initialized VectorStore at {self.store_path} with {len(self.data)} documents")
+    
+    @staticmethod
+    def create_vectorstore_id() -> str:
+        """Generate a unique vector store ID"""
+        return str(uuid.uuid4())
     
     def _load_store(self) -> Dict[str, Any]:
         """Load vectorstore from disk"""
@@ -35,54 +57,8 @@ class VectorStore:
     
     def _init_sample_documents(self):
         """Initialize with sample documents for demo purposes"""
-        sample_docs = {
-            "doc_auth_login": {
-                "text": "Authentication and Login Feature: Users must be able to log in using email and password. The system should validate credentials against the database, handle invalid login attempts with appropriate error messages, support password reset functionality, and implement session management with secure token-based authentication.",
-                "metadata": {"type": "epic", "category": "authentication", "name": "Login Feature"}
-            },
-            "doc_auth_mfa": {
-                "text": "Multi-Factor Authentication: Implement two-factor authentication for enhanced security. Support OTP via email, SMS, and authenticator apps. Users can enable/disable MFA in account settings. Recovery codes should be provided for account recovery. All authentication attempts should be logged.",
-                "metadata": {"type": "epic", "category": "security", "name": "MFA System"}
-            },
-            "doc_api_users": {
-                "text": "User Management API: Create REST endpoints for user CRUD operations. Endpoints: POST /api/users/register, GET /api/users/{id}, PUT /api/users/{id}, DELETE /api/users/{id}. Each endpoint should validate input, check authorization, and return standardized JSON responses with proper HTTP status codes.",
-                "metadata": {"type": "story", "category": "api", "name": "User API Endpoints"}
-            },
-            "doc_api_auth": {
-                "text": "Authentication API Endpoints: Implement POST /api/auth/login, POST /api/auth/logout, POST /api/auth/refresh-token, POST /api/auth/verify-email. All endpoints must validate requests, handle errors gracefully, and return JWT tokens with appropriate expiration times.",
-                "metadata": {"type": "story", "category": "api", "name": "Auth Endpoints"}
-            },
-            "doc_db_schema": {
-                "text": "Database Schema Design: Create tables for users with fields: id (primary key), email (unique), password_hash, first_name, last_name, created_at, updated_at. Add indexes on email and created_at for performance. Implement foreign key relationships for user roles and permissions.",
-                "metadata": {"type": "implementation", "category": "database", "name": "User Database Schema"}
-            },
-            "doc_db_security": {
-                "text": "Database Security: Implement row-level security policies. Use prepared statements to prevent SQL injection. Encrypt sensitive data at rest. Enable audit logging for all database changes. Regular backups should be automated with encryption.",
-                "metadata": {"type": "implementation", "category": "database", "name": "Security Policies"}
-            },
-            "doc_qa_login": {
-                "text": "QA Test Cases for Login: Test valid credentials, invalid email format, incorrect password, account lockout after failed attempts, password reset flow, remember me functionality, session timeout, and concurrent login handling.",
-                "metadata": {"type": "qa", "category": "testing", "name": "Login Test Suite"}
-            },
-            "doc_qa_api": {
-                "text": "API Testing: Test all endpoints with valid/invalid inputs, verify response status codes, validate JSON schema compliance, test rate limiting, verify authentication headers, test error messages, performance testing with load testing.",
-                "metadata": {"type": "qa", "category": "testing", "name": "API Test Coverage"}
-            },
-            "doc_performance": {
-                "text": "Performance Requirements: Login must complete within 500ms. API response time should be under 1 second for all endpoints. Database queries must be optimized with appropriate indexes. Implement caching for frequently accessed data. Support at least 1000 concurrent users.",
-                "metadata": {"type": "epic", "category": "performance", "name": "Performance SLA"}
-            },
-            "doc_deployment": {
-                "text": "Deployment Strategy: Use containerized deployment with Docker. Implement CI/CD pipeline using GitHub Actions. Automated testing before production deployment. Blue-green deployment strategy for zero-downtime updates. Health checks and monitoring with alerts.",
-                "metadata": {"type": "implementation", "category": "devops", "name": "Deployment Pipeline"}
-            }
-        }
-        
-        for doc_id, doc_data in sample_docs.items():
-            try:
-                self.store_document(doc_data["text"], doc_id, doc_data.get("metadata", {}))
-            except Exception as e:
-                logger.error(f"Error initializing sample document {doc_id}: {e}")
+        # Removed hardcoded sample documents - only use actual data from database
+        pass
     
     
     def _save_store(self):

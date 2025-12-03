@@ -2,9 +2,13 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from models.file_model import Upload, Epic
 from config.db import get_db
 from config.config import CONFLUENCE_URL
+from rag.vectorstore import VectorStore
 from PyPDF2 import PdfReader
 from docx import Document
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -50,12 +54,39 @@ async def upload_file(file: UploadFile = File(...)):
             db.add(upload_obj)
             db.commit()      # <-- commit transaction
             db.refresh(upload_obj)  # <-- refresh to get the ID
+            
+            # Create a vector store for this upload
+            vectorstore_id = VectorStore.create_vectorstore_id()
+            vectorstore = VectorStore(upload_id=upload_obj.id)
+            
+            # Store the requirement text in the vector store
+            vectorstore.store_document(
+                text=text,
+                doc_id=f"requirement_{upload_obj.id}",
+                metadata={
+                    "type": "requirement",
+                    "filename": file.filename,
+                    "upload_id": upload_obj.id
+                }
+            )
+            
+            # Store vectorstore ID in database
+            upload_obj.vectorstore_id = vectorstore_id
+            db.commit()
+            db.refresh(upload_obj)
+            
+            logger.info(f"Created vector store {vectorstore_id} for upload {upload_obj.id}")
 
-        return {"message": "File uploaded successfully", "upload_id": upload_obj.id}
+        return {
+            "message": "File uploaded successfully",
+            "upload_id": upload_obj.id,
+            "vectorstore_id": vectorstore_id
+        }
 
     except Exception as e:
         import traceback
         traceback.print_exc()
+        logger.error(f"Error uploading file: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

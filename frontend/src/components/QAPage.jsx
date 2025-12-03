@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchAllQA } from "../api/api";
-import { FaCheckSquare, FaSpinner, FaSync, FaChevronLeft, FaChevronRight, FaSortUp, FaSortDown } from "react-icons/fa";
+import { FaCheckSquare, FaSpinner, FaSync, FaChevronLeft, FaChevronRight, FaSortUp, FaSortDown, FaCode, FaCopy, FaTimes } from "react-icons/fa";
 
 export default function QAPage() {
   const [qa, setQA] = useState([]);
@@ -12,6 +12,9 @@ export default function QAPage() {
   const [totalQATests, setTotalQATests] = useState(0);
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [expandedScripts, setExpandedScripts] = useState({});
+  const [scriptLanguage, setScriptLanguage] = useState({});
+  const [copyNotification, setCopyNotification] = useState(null);
   const pageSize = 10;
 
   const loadQA = async (page = 1) => {
@@ -42,11 +45,92 @@ export default function QAPage() {
     initialLoad();
   }, [currentPage, sortBy, sortOrder]);
 
-  const toggleExpanded = (qaId) => {
-    setExpandedRows(prev => ({
+  const generateKarateScript = (test) => {
+    const testTitle = test.content?.title || `Test ${test.id}`;
+    const testScenarios = test.content?.testScenarios || [];
+    
+    const scenarios = testScenarios.map((scenario, idx) => 
+      `    And match response contains '${scenario.replace(/'/g, "\\'")}'`
+    ).join('\n');
+
+    return `Feature: API Automation - ${testTitle}
+  
+  Background:
+    * url 'http://api.example.com'
+    * header Accept = 'application/json'
+
+  Scenario: ${testTitle}
+    When method get
+    Then status 200
+${scenarios || '    # Add your test scenarios here'}`;
+  };
+
+  const generateJavaScript = (test) => {
+    const testTitle = test.content?.title || `Test${test.id}`;
+    const className = testTitle.replace(/[^a-zA-Z0-9]/g, '');
+    
+    return `import io.restassured.RestAssured;
+import io.restassured.response.Response;
+import org.junit.Test;
+import static io.restassured.RestAssured.*;
+import static org.hamcrest.Matchers.*;
+
+public class ${className}Test {
+  
+  @Test
+  public void test${className}() {
+    RestAssured.baseURI = "http://api.example.com";
+    
+    Response response = given()
+      .header("Accept", "application/json")
+      .when()
+      .get("/endpoint")
+      .then()
+      .assertThat()
+      .statusCode(200)
+      .extract()
+      .response();
+    
+    System.out.println("Response: " + response.asString());
+  }
+}`;
+  };
+
+  const copyToClipboard = (text, qaId) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopyNotification(qaId);
+      setTimeout(() => setCopyNotification(null), 2000);
+    });
+  };
+
+  const toggleScript = (qaId, language) => {
+    setExpandedScripts(prev => ({
       ...prev,
       [qaId]: !prev[qaId]
     }));
+    setScriptLanguage(prev => ({
+      ...prev,
+      [qaId]: language
+    }));
+  };
+
+  const getTestTitle = (qa) => {
+    if (typeof qa.content === 'string') {
+      try {
+        const parsed = JSON.parse(qa.content);
+        return parsed.title || parsed.name || 'QA Test';
+      } catch {
+        return qa.content.substring(0, 50);
+      }
+    }
+    return qa.content?.title || qa.content?.name || 'QA Test';
+  };
+
+  const getTestDescription = (qa) => {
+    if (typeof qa.content === 'string') {
+      return qa.content.substring(0, 100);
+    }
+    return JSON.stringify(qa.content).substring(0, 100);
   };
 
   return (
@@ -70,7 +154,7 @@ export default function QAPage() {
           </button>
         </div>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          View all QA test cases for the selected story
+          View all QA test cases with automation script generation
         </p>
       </div>
 
@@ -129,7 +213,8 @@ export default function QAPage() {
                       {sortBy === 'id' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Test Case</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Test Case Title</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Description</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
                     <button className="flex items-center gap-2" onClick={() => {
                       if (sortBy === 'created_at') {
@@ -144,21 +229,98 @@ export default function QAPage() {
                       {sortBy === 'created_at' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
                     </button>
                   </th>
+                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">Automation Scripts</th>
                 </tr>
               </thead>
               <tbody>
                 {qa.map((test) => (
                     <tr key={test.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition">
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-medium">{test.id}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 line-clamp-2">{test.content?.substring(0, 50)}...</td>
+                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-semibold">
+                        {getTestTitle(test)}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                        {getTestDescription(test)}...
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                         {new Date(test.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => toggleScript(test.id, 'karate')}
+                            className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded transition flex items-center gap-1"
+                            title="Generate Karate Script"
+                          >
+                            <FaCode className="text-xs" />
+                            Karate
+                          </button>
+                          <button
+                            onClick={() => toggleScript(test.id, 'java')}
+                            className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded transition flex items-center gap-1"
+                            title="Generate Java Script"
+                          >
+                            <FaCode className="text-xs" />
+                            Java
+                          </button>
+                        </div>
                       </td>
                     </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {/* Automation Script Modal */}
+          {Object.entries(expandedScripts).map(([qaId, isOpen]) => {
+            if (!isOpen) return null;
+            const test = qa.find(t => t.id === parseInt(qaId));
+            if (!test) return null;
+            
+            const language = scriptLanguage[qaId];
+            const script = language === 'karate' ? generateKarateScript(test) : generateJavaScript(test);
+            
+            return (
+              <div key={qaId} className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-3xl w-full max-h-96 flex flex-col">
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                      {language === 'karate' ? '🎭 Karate' : '☕ Java'} Automation Script - {getTestTitle(test)}
+                    </h3>
+                    <button
+                      onClick={() => toggleScript(qaId, language)}
+                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition"
+                    >
+                      <FaTimes className="text-xl" />
+                    </button>
+                  </div>
+
+                  {/* Modal Body - Script */}
+                  <div className="flex-1 overflow-y-auto p-4">
+                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-xs overflow-x-auto">
+                      {script}
+                    </pre>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {copyNotification === parseInt(qaId) && '✓ Copied to clipboard'}
+                    </span>
+                    <button
+                      onClick={() => copyToClipboard(script, parseInt(qaId))}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition"
+                    >
+                      <FaCopy className="text-sm" />
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between">

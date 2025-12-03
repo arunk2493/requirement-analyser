@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config.db import Base, engine
-from routes import upload, generateStories, generateEpics, generateQA, listFiles, generateTestPlan, getEpics, getStories, getQA, getTestPlan, agents_router
+from routes import upload, generateStories, generateEpics, generateQA, listFiles, generateTestPlan, getEpics, getStories, getQA, getTestPlan, agents_router, rag_search
 
 Base.metadata.create_all(bind=engine)
 
@@ -43,3 +43,4 @@ app.include_router(getStories.router)
 app.include_router(getQA.router)
 app.include_router(getTestPlan.router)
 app.include_router(agents_router.router)
+app.include_router(rag_search.router)

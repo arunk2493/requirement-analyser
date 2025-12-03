@@ -404,7 +404,8 @@ export default function AgenticAIPage() {
           )}
         </div>
 
-        {/* RAG Search Card */}
+        {/* RAG Search Card - HIDDEN FOR NOW */}
+        {/* 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-orange-600 mb-4">🔍 Search Similar Documents</h2>
           <div className="space-y-4">
@@ -475,6 +476,7 @@ export default function AgenticAIPage() {
             </div>
           )}
         </div>
+        */}
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import {
   FaList,
   FaFlask,
   FaCheckSquare,
-  FaFileAlt,
+  FaHistory,
   FaRobot,
 } from "react-icons/fa";
 
@@ -15,11 +15,11 @@ export default function Sidebar({ darkMode, setDarkMode }) {
     { path: "/", label: "Dashboard", icon: <FaHome /> },
     { path: "/upload", label: "Upload", icon: <FaUpload /> },
     { path: "/agentic-ai", label: "Agentic AI", icon: <FaRobot /> },
-    { path: "/generate", label: "Generate Confluence", icon: <FaFileAlt /> },
     { path: "/epics", label: "Epics", icon: <FaBook /> },
     { path: "/stories", label: "Stories", icon: <FaList /> },
     { path: "/qa", label: "QA", icon: <FaCheckSquare /> },
     { path: "/testplans", label: "Test Plans", icon: <FaFlask /> },
+    { path: "/history", label: "History", icon: <FaHistory /> },
   ];
 
   return (

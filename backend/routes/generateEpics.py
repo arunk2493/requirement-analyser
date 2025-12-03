@@ -10,23 +10,17 @@ import json
 import uuid
 
 router = APIRouter()
-vectorstore = VectorStore()
-print("Confluence URL from config:", CONFLUENCE_URL)
-print("Confluence Username from config:", CONFLUENCE_USERNAME)
-print("Confluence Password from config:", CONFLUENCE_PASSWORD)
-print("Confluence Space Key from config:", CONFLUENCE_SPACE_KEY)
-print("Confluence Root Folder ID from config:", CONFLUENCE_ROOT_FOLDER_ID)
-print("Initializing Confluence clientssss.............")
+router = APIRouter()
 
-# Initialize Confluence client
+# Initialize Confluence client with config values
 confluence = Confluence(
-    url='https://contactarungk.atlassian.net/wiki',
-    username='contactarungk@gmail.com',
-    password='ATATT3xFfGF0pJqRBI2r1aUW6qaxgh0eH56zJ4vqnhQoVBor1e3HGqHLDru0qyE54VrCgptsSC41e-oPWrleg7S08xpq3PqcwAioQU-OiIxkA8zR_B4GPa1gjgOJplkaCd2vPfOdubGfxqwZFczfnZTqJB5lIQs8BIW5OziNzS0Zo2LnYdlDFh8=435E9689'
+    url=CONFLUENCE_URL,
+    username=CONFLUENCE_USERNAME,
+    password=CONFLUENCE_PASSWORD
 )
 
-SPACE_KEY = "~7120202f433386eb414a158a28270f59730758"
-ROOT_FOLDER_ID = "491521"
+SPACE_KEY = CONFLUENCE_SPACE_KEY
+ROOT_FOLDER_ID = CONFLUENCE_ROOT_FOLDER_ID
 
 def add_timestamp(name: str):
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
