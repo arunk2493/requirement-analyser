@@ -1,13 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from models.file_model import Story, QA, Epic
 from config.gemini import generate_json
 from config.db import get_db
+from config.dependencies import get_current_user
+from config.auth import TokenData
 from atlassian import Confluence
 import datetime
 
 router = APIRouter()
 
-# Reuse Confluence client
 confluence = Confluence(
     url='',
     username='',
@@ -46,14 +47,12 @@ def create_testplan_page(title: str, content: dict, parent_id: str):
 
 
 @router.post("/generate-testplan/{story_id}")
-def generate_testplan(story_id: int):
+def generate_testplan(story_id: int, current_user: TokenData = Depends(get_current_user)):
     with get_db() as db:
-        # Fetch story
         story_obj = db.query(Story).filter(Story.id == story_id).first()
         if not story_obj:
             raise HTTPException(status_code=404, detail="Story not found")
 
-        # Fetch epic details using story.epic_id
         epic_obj = db.query(Epic).filter(Epic.id == story_obj.epic_id).first()
         if not epic_obj:
             raise HTTPException(status_code=404, detail="Epic not found")
@@ -61,7 +60,6 @@ def generate_testplan(story_id: int):
         if not epic_obj.confluence_page_id:
             raise HTTPException(status_code=400, detail="Epic does not have a Confluence page")
 
-        # Prompt (unchanged)
         prompt = f"""
 Generate a detailed test plan only in STRICT JSON format.
 The JSON must be an array of testPlan objects.
@@ -82,7 +80,6 @@ Story:
 {story_obj.content}
 """
 
-        # Generate JSON from Gemini
         try:
             testplan_list = generate_json(prompt)
         except ValueError as e:
@@ -94,25 +91,23 @@ Story:
         saved_items = []
 
         for plan in testplan_list:
-            # Save QA in DB
             testplan_db = QA(
                 story_id=story_id,
                 type="test_plan",
                 content=plan
             )
             db.add(testplan_db)
-            db.flush()  # Get generated ID
+            db.flush()
 
-            # Create Confluence page under the epic's page
             try:
-                confluence_page, title_ts = create_testplan_page(
+                confluence_page, _ = create_testplan_page(
                     plan.get("title", "Test Plan"), plan, epic_obj.confluence_page_id
                 )
                 testplan_db.confluence_page_id = confluence_page['id']
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Confluence test plan creation error: {str(e)}")
 
-            db.commit()  # Save Confluence page ID in QA table
+            db.commit()
             saved_items.append({
                 "id": testplan_db.id,
                 "content": plan,

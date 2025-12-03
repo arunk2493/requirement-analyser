@@ -1,12 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from models.file_model import Epic, Story
 from config.gemini import generate_json
 from config.db import get_db
+from config.dependencies import get_current_user
+from config.auth import TokenData
 
 router = APIRouter()
 
 @router.post("/generate-stories/{epic_id}")
-def generate_stories(epic_id: int):
+def generate_stories(epic_id: int, current_user: TokenData = Depends(get_current_user)):
     with get_db() as db:
         epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
         if not epic_obj:

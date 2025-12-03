@@ -13,3 +13,7 @@ python-docx
 python-multipart
 fpdf2
 atlassian-python-api
+python-jose[cryptography]
+bcrypt
+email-validator
+PyJWT

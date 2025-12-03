@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from models.file_model import Upload, Epic, QA
 from config.gemini import generate_json
 from config.db import get_db
+from config.dependencies import get_current_user
+from config.auth import TokenData
 from atlassian import Confluence
 from config.config import CONFLUENCE_URL, CONFLUENCE_USERNAME, CONFLUENCE_PASSWORD, CONFLUENCE_SPACE_KEY, CONFLUENCE_ROOT_FOLDER_ID
 import datetime
@@ -85,7 +87,7 @@ def create_testplan_page(title: str, content: dict, parent_id: str):
 
 
 @router.post("/generate-epics/{upload_id}")
-def generate_epics(upload_id: int):
+def generate_epics(upload_id: int, current_user: TokenData = Depends(get_current_user)):
     with get_db() as db:
         upload_obj = db.query(Upload).filter(Upload.id == upload_id).first()
         if not upload_obj:

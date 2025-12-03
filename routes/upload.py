@@ -1,7 +1,9 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query, Depends
 from models.file_model import Upload, Epic
 from config.db import get_db
 from config.config import CONFLUENCE_URL
+from config.dependencies import get_current_user
+from config.auth import TokenData
 from PyPDF2 import PdfReader
 from docx import Document
 from typing import Optional
@@ -25,7 +27,10 @@ def get_confluence_page_url(page_id: str) -> Optional[str]:
     return f"{base}/pages/viewpage.action?pageId={pid}"
 
 @router.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(
+    file: UploadFile = File(...),
+    current_user: TokenData = Depends(get_current_user)
+):
     try:
         # Extract text from file
         if file.filename.endswith(".pdf"):
@@ -41,15 +46,13 @@ async def upload_file(file: UploadFile = File(...)):
             except UnicodeDecodeError:
                 text = contents.decode("latin1")
 
-        # Store as JSON
         content_json = {"requirement": text}
 
-        # Store in DB
         with get_db() as db:
             upload_obj = Upload(filename=file.filename, content=content_json)
             db.add(upload_obj)
-            db.commit()      # <-- commit transaction
-            db.refresh(upload_obj)  # <-- refresh to get the ID
+            db.commit()
+            db.refresh(upload_obj)
 
         return {"message": "File uploaded successfully", "upload_id": upload_obj.id}
 
@@ -60,22 +63,22 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 @router.get("/uploads")
-def get_all_uploads(page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=100)):
+def get_all_uploads(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    current_user: TokenData = Depends(get_current_user)
+):
     """Get all uploaded files with pagination. Returns file info with first epic's Confluence link if available."""
     try:
         with get_db() as db:
-            # Get total count
             total_count = db.query(Upload).count()
             
-            # Calculate offset
             offset = (page - 1) * page_size
             
-            # Get paginated results
             uploads = db.query(Upload).order_by(Upload.created_at.desc()).offset(offset).limit(page_size).all()
             
             upload_list = []
             for upload in uploads:
-                # Get the first epic for this upload to get Confluence link
                 first_epic = db.query(Epic).filter(Epic.upload_id == upload.id).first()
                 
                 upload_data = {
@@ -86,7 +89,6 @@ def get_all_uploads(page: int = Query(1, ge=1), page_size: int = Query(10, ge=1,
                 }
                 upload_list.append(upload_data)
             
-            # Calculate pagination info
             total_pages = (total_count + page_size - 1) // page_size
             
             return {

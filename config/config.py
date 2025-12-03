@@ -10,3 +10,8 @@ CONFLUENCE_USERNAME = os.getenv("confluence_username")
 CONFLUENCE_PASSWORD = os.getenv("confluence_password")
 CONFLUENCE_SPACE_KEY = os.getenv("confluence_space_key")
 CONFLUENCE_ROOT_FOLDER_ID = os.getenv("confluence_root_folder_id")
+
+# Gmail OAuth Configuration
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5173/auth/callback")

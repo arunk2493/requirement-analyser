@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from models.file_model import Epic, QA
 from config.db import get_db
 from config.config import CONFLUENCE_URL
+from config.dependencies import get_current_user
+from config.auth import TokenData
 from typing import Optional
 
 router = APIRouter()
@@ -10,10 +12,8 @@ def get_confluence_page_url(page_id: str) -> Optional[str]:
     """Generate Confluence page URL from page ID"""
     if not page_id:
         return None
-    # sanitize base URL and page id in case of stray quotes or trailing slashes
     try:
         base = (CONFLUENCE_URL or "").strip()
-        # remove any surrounding single/double quotes and trailing slashes
         base = base.strip("'\"")
         base = base.rstrip('/')
     except Exception:
@@ -25,7 +25,7 @@ def get_confluence_page_url(page_id: str) -> Optional[str]:
     return f"{base}/pages/viewpage.action?pageId={pid}"
 
 @router.get("/testplans/{epic_id}")
-def get_testplans(epic_id: int):
+def get_testplans(epic_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get all test plans for a given epic"""
     with get_db() as db:
         epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
@@ -59,7 +59,7 @@ def get_testplans(epic_id: int):
         }
 
 @router.get("/testplans/{epic_id}/{testplan_id}")
-def get_testplan_details(epic_id: int, testplan_id: int):
+def get_testplan_details(epic_id: int, testplan_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get details of a specific test plan"""
     with get_db() as db:
         epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
@@ -93,6 +93,7 @@ def get_all_testplans(
     page_size: int = Query(10, ge=1, le=100),
     sort_by: str = Query("created_at"),
     sort_order: str = Query("desc"),
+    current_user: TokenData = Depends(get_current_user),
 ):
     """Get all test plans across all epics (paginated). Supports sorting by `id` or `created_at`."""
     with get_db() as db:
@@ -115,13 +116,11 @@ def get_all_testplans(
 
         testplan_list = []
         for testplan in testplans:
-            # extract title from stored JSON content if present
             title = None
             try:
                 if isinstance(testplan.content, dict):
                     title = testplan.content.get("title") or testplan.content.get("name")
                 else:
-                    # content might be stored as stringified JSON
                     import json
                     try:
                         parsed = json.loads(testplan.content)

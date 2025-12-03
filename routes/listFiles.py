@@ -1,11 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from config.db import get_db
+from config.dependencies import get_current_user
+from config.auth import TokenData
 from models.file_model import Upload, Epic, Story, QA, AggregatedUpload
 
 router = APIRouter()
 
 @router.get("/list-files")
-def list_files():
+def list_files(current_user: TokenData = Depends(get_current_user)):
     with get_db() as db:
         uploads = db.query(Upload).all()
         result = []
