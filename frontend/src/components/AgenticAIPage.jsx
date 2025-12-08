@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { generateEpicsAgent, generateStoriesAgent, generateQAAgent, generateTestPlanAgent, ragSearch, fetchUploads, getEpicsAgent, getStoriesAgent, getQAAgent, getTestPlanAgent } from "../api/api";
+import { generateEpicsAgent, generateStoriesAgent, generateQAAgent, generateTestPlanAgent, ragSearch, ragVectorStoreSearch, fetchUploads, getEpicsAgent, getStoriesAgent, getQAAgent, getTestPlanAgent } from "../api/api";
 import { FaRobot, FaSpinner, FaExternalLinkAlt, FaSync, FaCheckCircle, FaExclamationCircle, FaArrowRight } from "react-icons/fa";
 
 export default function AgenticAIPage() {
@@ -326,11 +326,11 @@ export default function AgenticAIPage() {
     }
     try {
       setLoadingRAG(true);
-      const res = await ragSearch(ragQuery, uploadId ? parseInt(uploadId) : null, 5);
-      setRagResults(res.data.data?.documents || []);
-      showMessage("success", "✅ Documents retrieved successfully!");
+      const res = await ragVectorStoreSearch(ragQuery, 5);
+      setRagResults(res.data.search_results || []);
+      showMessage("success", `✅ Found ${(res.data.search_results || []).length} documents!`);
     } catch (e) {
-      showMessage("error", e.response?.data?.detail?.error || e.response?.data?.detail || "Failed to retrieve documents");
+      showMessage("error", e.response?.data?.detail || "Failed to search documents");
     } finally {
       setLoadingRAG(false);
     }
@@ -764,79 +764,7 @@ export default function AgenticAIPage() {
           )}
         </div>
 
-        {/* RAG Search Card - HIDDEN FOR NOW */}
-        {/* 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-orange-600 mb-4">🔍 Search Similar Documents</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Search Query
-              </label>
-              <input
-                type="text"
-                value={ragQuery}
-                onChange={(e) => setRagQuery(e.target.value)}
-                placeholder="Enter search query"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
-              />
-            </div>
-            <button
-              onClick={handleRAGSearch}
-              disabled={loadingRAG || !ragQuery}
-              className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
-            >
-              {loadingRAG ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}
-              {loadingRAG ? "Searching..." : "Search Documents"}
-            </button>
-          </div>
 
-          {ragResults.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Retrieved Documents ({ragResults.length})</h3>
-              <div className="space-y-3">
-                {ragResults.map((doc, idx) => {
-                  const docType = doc.metadata?.type || "document";
-                  const displayTitle = doc.metadata?.name || doc.metadata?.epic_name || doc.metadata?.story_name || `${docType.charAt(0).toUpperCase() + docType.slice(1)} ${idx + 1}`;
-                  const similarity = ((doc.similarity || 0) * 100).toFixed(1);
-                  
-                  // Color code based on similarity
-                  let matchColor = "bg-red-100 dark:bg-red-900 border-red-300 dark:border-red-700";
-                  if (similarity > 70) matchColor = "bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700";
-                  else if (similarity > 50) matchColor = "bg-yellow-100 dark:bg-yellow-900 border-yellow-300 dark:border-yellow-700";
-                  
-                  return (
-                    <div key={idx} className={`p-4 rounded-lg border transition hover:shadow-md ${matchColor}`}>
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="flex-1">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white">
-                            {displayTitle}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                            <span className="text-xs px-2 py-0.5 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full font-medium capitalize">
-                              {docType}
-                            </span>
-                            <span className={`text-xs font-bold px-3 py-0.5 rounded-full ${
-                              similarity > 70 ? 'bg-green-500 text-white' : 
-                              similarity > 50 ? 'bg-yellow-500 text-white' : 
-                              'bg-red-500 text-white'
-                            }`}>
-                              {similarity}% match
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3 leading-relaxed mt-2">
-                        {doc.text || doc.content || "No content available"}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-        */}
       </div>
     </div>
   );

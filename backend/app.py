@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config.db import Base, engine
-from routes import upload, generateStories, generateEpics, generateQA, listFiles, generateTestPlan, getEpics, getStories, getQA, getTestPlan, agents_router, rag_search, auth
+from routes import upload, generateStories, generateEpics, generateQA, listFiles, generateTestPlan, getEpics, getStories, getQA, getTestPlan, agents_router, rag_search, rag_vectorstore_search, auth
 
 logger.info("Starting Requirement Analyzer Backend")
 logger.info(f"Database engine available: {bool(engine)}")
@@ -88,5 +88,6 @@ app.include_router(getQA.router)
 app.include_router(getTestPlan.router)
 app.include_router(agents_router.router)
 app.include_router(rag_search.router)
+app.include_router(rag_vectorstore_search.router)
 
 logger.info("All routers registered successfully")
