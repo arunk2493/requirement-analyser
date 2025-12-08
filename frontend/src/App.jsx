@@ -10,6 +10,7 @@ import TestPlansPage from "./components/TestPlansPage";
 import History from "./components/GenerateConfluence";
 import AgenticAIPage from "./components/AgenticAIPage";
 import Dashboard from "./components/Dashboard";
+import SearchDocuments from "./components/SearchDocuments";
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -65,6 +66,7 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/upload" element={<UploadPage />} />
               <Route path="/agentic-ai" element={<AgenticAIPage />} />
+              <Route path="/search-documents" element={<SearchDocuments />} />
               <Route path="/history" element={<History />} />
               <Route path="/epics" element={<EpicsPage />} />
               <Route path="/stories" element={<StoriesPage />} />

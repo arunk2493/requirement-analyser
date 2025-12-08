@@ -103,6 +103,14 @@ export const ragSearch = (query, uploadId, topK = 5) =>
     top_k: topK 
   });
 
+export const ragVectorStoreSearch = (query, topK = 5) =>
+  api.get(`${API_BASE}/rag/vectorstore-search`, { 
+    params: {
+      query, 
+      top_k: topK 
+    }
+  });
+
 // ============================================
 // LEGACY GENERATION ENDPOINTS (POST)
 // All require Bearer token in Authorization header
