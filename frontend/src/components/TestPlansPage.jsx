@@ -56,12 +56,14 @@ export default function TestPlansPage() {
             </h1>
           </div>
           <Button
-            icon={refreshing ? "pi pi-spin pi-spinner" : "pi pi-refresh"}
+            icon="pi pi-refresh"
+            label="Refresh"
             onClick={() => loadTestPlans()}
-            loading={refreshing}
-            className="p-button-rounded p-button-lg"
-            style={{ backgroundColor: '#f97316', borderColor: '#f97316' }}
+            disabled={refreshing}
+            className="p-button-rounded p-button-text"
+            style={{ color: '#f97316' }}
             title="Refresh test plans"
+            loading={refreshing}
           />
         </div>
         <p className="text-gray-600 dark:text-gray-400 mt-2">

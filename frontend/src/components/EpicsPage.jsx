@@ -54,12 +54,14 @@ export default function EpicsPage() {
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Epics</h1>
           </div>
           <Button
-            icon={refreshing ? "pi pi-spin pi-spinner" : "pi pi-refresh"}
+            icon="pi pi-refresh"
+            label="Refresh"
             onClick={() => loadEpics()}
-            loading={refreshing}
-            className="p-button-rounded p-button-lg"
-            style={{ backgroundColor: '#a855f7', borderColor: '#a855f7' }}
+            disabled={refreshing}
+            className="p-button-rounded p-button-text"
+            style={{ color: '#a855f7' }}
             title="Refresh epics"
+            loading={refreshing}
           />
         </div>
         <p className="text-gray-600 dark:text-gray-400 mt-2">

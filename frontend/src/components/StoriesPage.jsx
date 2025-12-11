@@ -56,12 +56,14 @@ export default function StoriesPage() {
             </h1>
           </div>
           <Button
-            icon={refreshing ? "pi pi-spin pi-spinner" : "pi pi-refresh"}
+            icon="pi pi-refresh"
+            label="Refresh"
             onClick={() => loadStories()}
-            loading={refreshing}
-            className="p-button-rounded p-button-lg"
-            style={{ backgroundColor: '#22c55e', borderColor: '#22c55e' }}
+            disabled={refreshing}
+            className="p-button-rounded p-button-text"
+            style={{ color: '#22c55e' }}
             title="Refresh stories"
+            loading={refreshing}
           />
         </div>
         <p className="text-gray-600 dark:text-gray-400 mt-2">

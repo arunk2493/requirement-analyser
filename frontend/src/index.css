@@ -707,3 +707,46 @@ body {
   color: #ffffff !important;
 }
 
+/* Icon button styling for refresh actions */
+.p-button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.p-button.p-button-icon.p-button-text {
+  padding: 0.5rem !important;
+  font-size: 1.25rem !important;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.p-button.p-button-icon.p-button-text:hover:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.dark .p-button.p-button-icon.p-button-text:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Refresh button styling */
+.p-button.p-button-rounded.p-button-text {
+  border: 2px solid currentColor;
+  background-color: rgba(0, 0, 0, 0.02);
+  padding: 0.5rem 1rem !important;
+  width: auto;
+  height: auto;
+}
+
+.dark .p-button.p-button-rounded.p-button-text {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.p-button.p-button-rounded.p-button-text:hover:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.dark .p-button.p-button-rounded.p-button-text:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchAllQA } from "../api/api";
 import { FaCheckSquare, FaSpinner, FaSync, FaChevronLeft, FaChevronRight, FaSortUp, FaSortDown, FaCode, FaCopy, FaTimes, FaFilter, FaDownload } from "react-icons/fa";
+import { Button } from "primereact/button";
 
 export default function QAPage() {
   const [qa, setQA] = useState([]);
@@ -268,14 +269,16 @@ public class ${className}Test {
               <FaDownload className="text-xl" />
               <span className="text-sm font-medium">Download CSV</span>
             </button>
-            <button
+            <Button
+              icon="pi pi-refresh"
+              label="Refresh"
               onClick={() => loadQA()}
               disabled={refreshing}
-              className="p-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white rounded-lg transition"
+              className="p-button-rounded p-button-text"
+              style={{ color: '#3b82f6' }}
               title="Refresh QA tests"
-            >
-              <FaSync className={`text-2xl ${refreshing ? "animate-spin" : ""}`} />
-            </button>
+              loading={refreshing}
+            />
           </div>
         </div>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
