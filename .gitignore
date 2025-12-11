@@ -209,5 +209,4 @@ package-lock.json
 node_modules/
 frontend/node_modules/
 frontend/package-lock.json
-
-
+backend/storage/
