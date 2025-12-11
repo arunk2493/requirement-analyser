@@ -9,7 +9,6 @@ from models.file_model import Upload, Epic
 from config.db import get_db, get_db_context
 from config.config import CONFLUENCE_URL
 from config.auth import get_current_user, TokenData
-from rag.vectorstore import VectorStore
 from PyPDF2 import PdfReader
 from docx import Document
 from typing import Optional
@@ -69,32 +68,11 @@ async def upload_file(
             db.commit()      # <-- commit transaction
             db.refresh(upload_obj)  # <-- refresh to get the ID
             
-            # Create a vector store for this upload
-            vectorstore_id = VectorStore.create_vectorstore_id()
-            vectorstore = VectorStore(upload_id=upload_obj.id)
-            
-            # Store the requirement text in the vector store
-            vectorstore.store_document(
-                text=text,
-                doc_id=f"requirement_{upload_obj.id}",
-                metadata={
-                    "type": "requirement",
-                    "filename": file.filename,
-                    "upload_id": upload_obj.id
-                }
-            )
-            
-            # Store vectorstore ID in database
-            upload_obj.vectorstore_id = vectorstore_id
-            db.commit()
-            db.refresh(upload_obj)
-            
-            logger.info(f"Created vector store {vectorstore_id} for upload {upload_obj.id}")
+            logger.info(f"Stored upload {upload_obj.id} in database")
 
         return {
             "message": "File uploaded successfully",
-            "upload_id": upload_obj.id,
-            "vectorstore_id": vectorstore_id
+            "upload_id": upload_obj.id
         }
 
     except Exception as e:
