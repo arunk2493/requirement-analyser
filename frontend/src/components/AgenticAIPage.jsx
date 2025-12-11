@@ -4,6 +4,9 @@ import { FaRobot, FaSpinner, FaExternalLinkAlt, FaSync, FaCheckCircle, FaTimesCi
 import { Toast } from "primereact/toast";
 import { Dropdown } from "primereact/dropdown";
 import { Button } from "primereact/button";
+import { Accordion, AccordionTab } from "primereact/accordion";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -85,6 +88,11 @@ export default function AgenticAIPage() {
   const [jiraCredentials, setJiraCredentials] = useState(null);
   const [loadingJiraItems, setLoadingJiraItems] = useState(new Set()); // Track loading per item
   const [jiraResults, setJiraResults] = useState({});
+
+  // ============================================================================
+  // STATE MANAGEMENT - QA Regeneration Tracking
+  // ============================================================================
+  const [qaRegenerationAttempts, setQaRegenerationAttempts] = useState({}); // Track attempts per story
 
   // ============================================================================
   // LIFECYCLE HOOKS - Initialize Component
@@ -233,7 +241,7 @@ export default function AgenticAIPage() {
       setGeneratedEpics(epics);
       setEpicProgress(75);
       
-      showMessage("success", "✅ Epics generated successfully!");
+      showMessage("success", "Epics generated successfully!");
       
       // Auto-create epics in Jira if credentials are configured
       if (jiraCredentials) {
@@ -329,10 +337,10 @@ export default function AgenticAIPage() {
 
     // Show summary message
     if (successCount > 0) {
-      showMessage("success", `✅ ${successCount} epic(s) created in Jira`);
+      showMessage("success", `${successCount} epic(s) created in Jira`);
     }
     if (failureCount > 0) {
-      showMessage("warning", `⚠️ ${failureCount} epic(s) failed to create in Jira`);
+      showMessage("warning", `${failureCount} epic(s) failed to create in Jira`);
     }
 
     // Refresh epics to get persisted Jira data
@@ -974,6 +982,14 @@ export default function AgenticAIPage() {
       showMessage("error", "Please select a story");
       return;
     }
+
+    // Check if regeneration limit reached
+    const currentAttempts = qaRegenerationAttempts[storyId] || 0;
+    if (currentAttempts >= 3) {
+      showMessage("error", "Maximum regeneration attempts (3) reached for this story. Please select a different story.");
+      return;
+    }
+
     try {
       setLoadingQA(true);
       setQAProgress(10);
@@ -993,6 +1009,12 @@ export default function AgenticAIPage() {
       }
       
       setQAProgress(75);
+      
+      // Increment regeneration attempt counter
+      setQaRegenerationAttempts(prev => ({
+        ...prev,
+        [storyId]: (prev[storyId] || 0) + 1
+      }));
       
       showMessage("success", "QA tests generated successfully!");
       // Refresh the QA list
@@ -1083,6 +1105,13 @@ export default function AgenticAIPage() {
       localStorage.removeItem("lastSelectedStoryId");
     }
     setGeneratedQA([]);
+    // Reset regeneration attempts for new story
+    if (sId) {
+      setQaRegenerationAttempts(prev => ({
+        ...prev,
+        [sId]: 0
+      }));
+    }
     // fetchQA will be called automatically via useEffect
   };
 
@@ -1183,48 +1212,64 @@ export default function AgenticAIPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6 md:p-10">
       {/* Toast Notifications */}
       <Toast 
         ref={toast} 
         position="top-center"
         itemTemplate={(item) => (
-          <div className="flex items-center gap-3 w-full">
-            <div className="flex-shrink-0 text-lg">
+          <div className="flex items-center gap-4 w-full px-4 py-3">
+            <div className="flex-shrink-0 text-xl">
               {item.severity === "success" && <FaCheckCircle />}
               {item.severity === "error" && <FaTimesCircle />}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm">{item.summary}</p>
-              <p className="text-sm opacity-95">{item.detail}</p>
+              <p className="font-bold text-base">{item.summary}</p>
+              <p className="text-sm opacity-90">{item.detail}</p>
             </div>
           </div>
         )}
       />
 
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3">
-          <FaRobot className="text-4xl text-blue-600" />
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Agentic AI</h1>
+      <div className="mb-20 px-8 py-12 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-3xl border border-blue-100 dark:border-gray-600 shadow-xl">
+        <div className="flex items-center gap-8">
+          <div className="p-5 bg-blue-100 dark:bg-blue-900 rounded-xl flex-shrink-0 shadow-md">
+            <FaRobot className="text-5xl text-blue-600 dark:text-blue-300" />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-6xl font-bold text-gray-900 dark:text-white mb-4">Requirment Analyser Agents</h1>
+            <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed font-medium">
+              Use specialized agents to generate epics, stories, and QA tests from your requirements
+            </p>
+          </div>
         </div>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Use specialized agents to generate epics, stories, and QA tests from your requirements
-        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Generate Epics Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-purple-600 mb-4">Generate Epics</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Select Upload {userUploads.length > 0 && <span className="text-purple-600">({userUploads.length})</span>}
+      {/* Accordion for Agent Sections */}
+      <div className="mb-10 px-4">
+        <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">Select a section below to expand and manage your agents</p>
+      </div>
+      <style>{`
+        .p-accordion .p-accordion-header .p-accordion-toggle-icon {
+          font-weight: bold;
+          margin-right: 0.75rem;
+        }
+        .p-accordion .p-accordion-header {
+          padding-left: 1.5rem !important;
+        }
+      `}</style>
+      <Accordion className="mb-20" activeIndex={0}>
+        {/* Generate Epics Tab */}
+        <AccordionTab header="Generate Epics" headerClassName="bg-purple-100 dark:bg-purple-900 text-purple-900 dark:text-purple-100 font-bold py-6 text-xl border-2 border-purple-300 dark:border-purple-700 rounded-lg transition hover:bg-purple-200 dark:hover:bg-purple-800 hover:shadow-md mb-6">
+          <div className="space-y-10 pt-8 pb-8">
+            <div className="space-y-4">
+              <label className="block text-lg font-bold text-gray-800 dark:text-gray-200 mb-5">
+                <span>Select Upload</span> {userUploads.length > 0 && <span className="text-purple-600 ml-2">({userUploads.length})</span>}
               </label>
               {loadingUploads ? (
-                <div className="flex items-center justify-center py-2">
-                  <FaSpinner className="animate-spin text-purple-500" />
+                <div className="flex items-center justify-center py-6">
+                  <FaSpinner className="animate-spin text-purple-500 text-2xl" />
                 </div>
               ) : (
                 <Dropdown
@@ -1249,27 +1294,27 @@ export default function AgenticAIPage() {
                   optionGroupLabel="label"
                   optionGroupChildren="items"
                   placeholder="-- Choose an upload --"
-                  className="w-full p-3"
+                  className="w-full text-base"
                   panelClassName="dark:bg-gray-700 dark:text-white"
                   showClear
                 />
               )}
             </div>
-            <div className="relative group">
+            <div className="relative group mt-6">
               <Button
                 onClick={handleGenerateEpics}
                 disabled={loadingEpics || !uploadId || generatedEpics.length > 0}
                 severity="success"
-                className="w-full"
+                className="w-full py-4 text-base font-semibold"
                 style={{ backgroundColor: '#a855f7', borderColor: '#a855f7' }}
                 icon={loadingEpics ? undefined : "pi pi-arrow-right"}
                 loading={loadingEpics}
                 label={loadingEpics ? `Generating... ${epicProgress}%` : "Generate Epics"}
               />
               {epicProgress > 0 && loadingEpics && (
-                <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="mt-4 w-full bg-gray-300 dark:bg-gray-600 rounded-full h-3">
                   <div 
-                    className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                    className="bg-purple-500 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${epicProgress}%` }}
                   />
                 </div>
@@ -1280,271 +1325,132 @@ export default function AgenticAIPage() {
                 </div>
               )}
             </div>
-          </div>
 
-          {generatedEpics.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Generated Epics ({generatedEpics.length})</h3>
-              <div className="overflow-x-auto overflow-y-auto rounded-lg max-h-96" style={{scrollbarWidth: 'thin'}}>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-purple-100 dark:bg-purple-900">
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white w-12">ID</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white flex-1">Name</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white w-24">Confluence</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white w-28">Jira Link</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white w-28">Jira Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {generatedEpics.slice(0, 5).map((epic) => (
-                      <tr key={epic.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-purple-50 dark:hover:bg-gray-700">
-                        <td className="px-4 py-2 text-gray-900 dark:text-gray-100 w-12">{epic.id}</td>
-                        <td className="px-4 py-2 text-gray-900 dark:text-gray-100 flex-1 truncate">{epic.name}</td>
-                        <td className="px-4 py-2 w-24">
-                          {epic.confluence_page_url ? (
-                            <a
-                              href={epic.confluence_page_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded text-xs transition whitespace-nowrap"
-                            >
-                              <FaExternalLinkAlt /> View
-                            </a>
-                          ) : (
-                            <span className="text-gray-400 text-xs">N/A</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2 w-28">
-                          {(() => {
-                            const hasValidJiraInDB = epic.jira_key && epic.jira_url;
-                            const jiraKey = epic.jira_key;
-                            
-                            if (hasValidJiraInDB) {
-                              return (
-                                <a
-                                  href={epic.jira_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs transition whitespace-nowrap"
-                                >
-                                  <FaJira /> {jiraKey}
-                                </a>
-                              );
-                            }
-                            
-                            return (
-                              <span className="text-gray-400 text-xs">N/A</span>
-                            );
-                          })()}
-                        </td>
-                        <td className="px-4 py-2 w-28">
-                          {(() => {
-                            const isLoading = loadingJiraItems.has(`epic_${epic.id}`);
-                            const creationSuccess = epic.jira_creation_success;
-                            
-                            // If still creating, show spinner
-                            if (isLoading) {
-                              return (
-                                <div className="inline-flex items-center gap-1 px-2 py-1 bg-gray-400 text-white rounded text-xs whitespace-nowrap">
-                                  <FaSpinner className="animate-spin" />
-                                  Creating...
-                                </div>
-                              );
-                            }
-
-                            // If creation was successful, show success icon
-                            if (creationSuccess === true) {
-                              return (
-                                <div className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs whitespace-nowrap" title="Jira creation successful">
-                                  <FaCheckCircle /> Success
-                                </div>
-                              );
-                            }
-
-                            // If creation failed, show failure icon with retry button
-                            if (creationSuccess === false) {
-                              return (
-                                <div className="group relative inline-flex">
-                                  <button
-                                    onClick={() => {
-                                      console.log("Failed button clicked for epic:", epic.id);
-                                      retryCreateEpicInJira(epic);
-                                    }}
-                                    type="button"
-                                    className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs whitespace-nowrap transition hover:cursor-pointer"
-                                    title="Click to retry creating this epic in Jira"
-                                  >
-                                    <FaTimesCircle /> Failed
-                                  </button>
-                                  <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white rounded text-xs whitespace-nowrap z-10 pointer-events-none">
-                                    Click to retry
-                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-                                  </div>
-                                </div>
-                              );
-                            }
-
-                            // If no creation attempted yet, show N/A
-                            return (
-                              <span className="text-gray-400 text-xs">N/A</span>
-                            );
-                          })()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Generate Test Plan Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-orange-600 mb-4">Generate Test Plan</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Select Epic {generatedEpics.length > 0 && <span className="text-orange-600">({generatedEpics.length})</span>}
-              </label>
-              <Dropdown
-                value={epicIdForTestPlan}
-                onChange={(e) => handleEpicForTestPlanChange({ target: { value: e.value } })}
-                options={[
-                  recentEpics.length > 0 ? {
-                    label: "📌 Recent Epics",
-                    items: recentEpics.map((epic) => ({
-                      label: `⭐ ${epic.name} (ID: ${epic.id})`,
-                      value: epic.id
-                    }))
-                  } : null,
-                  generatedEpics.length > 0 ? {
-                    label: "All Epics",
-                    items: generatedEpics.map((epic) => ({
-                      label: `${epic.name} (ID: ${epic.id})`,
-                      value: epic.id
-                    }))
-                  } : null
-                ].filter(Boolean)}
-                optionGroupLabel="label"
-                optionGroupChildren="items"
-                placeholder="-- Choose an epic --"
-                className="w-full p-3"
-                panelClassName="dark:bg-gray-700 dark:text-white"
-                showClear
-              />
-              {generatedEpics.length === 0 && uploadId && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  💡 Generate epics first to create test plans
-                </p>
-              )}
-              {!uploadId && (
-                <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
-                  ⚠️ Select an upload from the first card to load epics
-                </p>
-              )}
-            </div>
-            <div className="relative group">
-              <Button
-                onClick={handleGenerateTestPlan}
-                disabled={loadingTestPlan || !epicIdForTestPlan || generatedTestPlans.length > 0}
-                severity="success"
-                className="w-full"
-                style={{ backgroundColor: '#f97316', borderColor: '#f97316' }}
-                icon={loadingTestPlan ? undefined : "pi pi-arrow-right"}
-                loading={loadingTestPlan}
-                label={loadingTestPlan ? `Generating... ${testPlanProgress}%` : "Generate Test Plan"}
-              />
-              {testPlanProgress > 0 && loadingTestPlan && (
-                <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div 
-                    className="bg-orange-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${testPlanProgress}%` }}
+            {generatedEpics.length > 0 && (
+              <div className="pt-10 mt-10 border-t-2 border-gray-300 dark:border-gray-600">
+                <h3 className="font-bold text-2xl text-gray-900 dark:text-white mb-8 flex items-center gap-4">
+                  <span className="w-2 h-8 bg-purple-500 rounded-full"></span>
+                  Generated Epics ({generatedEpics.length})
+                </h3>
+                <DataTable
+                  value={generatedEpics}
+                  emptyMessage="No epics generated"
+                  className="p-datatable-striped p-datatable-sm"
+                  responsiveLayout="scroll"
+                  stripedRows
+                  dataKey="id"
+                  scrollable
+                  scrollHeight="400px"
+                  style={{ borderRadius: '0.5rem' }}
+                >
+                  <Column
+                    field="id"
+                    header="ID"
+                    style={{ width: '80px' }}
+                    bodyClassName="text-gray-900 dark:text-gray-100 font-medium"
                   />
-                </div>
-              )}
-              {generatedTestPlans.length > 0 && (
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-10">
-                  Test Plans already present
-                </div>
-              )}
-            </div>
-            {generatedTestPlans.length === 0 && epicIdForTestPlan && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                💡 No existing test plans found. Generate test plans from the selected epic.
-              </p>
-            )}
-            {!epicIdForTestPlan && generatedEpics.length > 0 && (
-              <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
-                ⚠️ Select an epic from the dropdown to load test plans
-              </p>
+                  <Column
+                    field="name"
+                    header="Epic Name"
+                    style={{ width: '250px' }}
+                    bodyClassName="text-gray-900 dark:text-gray-100"
+                  />
+                  <Column
+                    header="Confluence"
+                    style={{ width: '130px' }}
+                    body={(rowData) => (
+                      rowData.confluence_page_url ? (
+                        <Button
+                          onClick={() => window.open(rowData.confluence_page_url, '_blank')}
+                          label="View"
+                          icon="pi pi-external-link"
+                          className="p-button-sm p-button-rounded"
+                          style={{ backgroundColor: '#a855f7', borderColor: '#a855f7' }}
+                          title="View on Confluence"
+                        />
+                      ) : (
+                        <span className="text-gray-400 text-sm">N/A</span>
+                      )
+                    )}
+                  />
+                  <Column
+                    header="Jira Link"
+                    style={{ width: '130px' }}
+                    body={(rowData) => (
+                      rowData.jira_url ? (
+                        <Button
+                          onClick={() => window.open(rowData.jira_url, '_blank')}
+                          label={rowData.jira_key || 'Open'}
+                          icon="pi pi-external-link"
+                          className="p-button-sm p-button-rounded"
+                          style={{ backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
+                          title="View on Jira"
+                        />
+                      ) : (
+                        <span className="text-gray-400 text-sm">N/A</span>
+                      )
+                    )}
+                  />
+                  <Column
+                    header="Jira Status"
+                    style={{ width: '140px' }}
+                    body={(rowData) => {
+                      const isLoading = loadingJiraItems.has(`epic_${rowData.id}`);
+                      const creationSuccess = rowData.jira_creation_success;
+                      
+                      if (isLoading) {
+                        return (
+                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-gray-400 text-white rounded text-xs whitespace-nowrap">
+                            <FaSpinner className="animate-spin" />
+                            Creating...
+                          </div>
+                        );
+                      }
+
+                      if (creationSuccess === true) {
+                        return (
+                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs whitespace-nowrap" title="Jira creation successful">
+                            <FaCheckCircle /> Success
+                          </div>
+                        );
+                      }
+
+                      if (creationSuccess === false) {
+                        return (
+                          <div className="group relative inline-flex">
+                            <button
+                              onClick={() => retryCreateEpicInJira(rowData)}
+                              type="button"
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs whitespace-nowrap transition hover:cursor-pointer"
+                              title="Click to retry creating this epic in Jira"
+                            >
+                              <FaTimesCircle /> Failed
+                            </button>
+                            <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white rounded text-xs whitespace-nowrap z-10 pointer-events-none">
+                              Click to retry
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <span className="text-gray-400 text-sm">N/A</span>
+                      );
+                    }}
+                  />
+                </DataTable>
+              </div>
             )}
           </div>
+        </AccordionTab>
 
-          {generatedTestPlans.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Generated Test Plans ({generatedTestPlans.length})</h3>
-              <div className="overflow-x-auto overflow-y-auto rounded-lg max-h-96" style={{scrollbarWidth: 'thin'}}>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-orange-100 dark:bg-orange-900">
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">ID</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">Title</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">Confluence Link</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {generatedTestPlans.map((testPlan) => {
-                      let displayName = "Test Plan";
-                      try {
-                        if (typeof testPlan.content === 'string') {
-                          const parsed = JSON.parse(testPlan.content);
-                          displayName = parsed.title || parsed.name || "Test Plan";
-                        } else if (testPlan.content?.title) {
-                          displayName = testPlan.content.title;
-                        } else if (testPlan.content?.name) {
-                          displayName = testPlan.content.name;
-                        }
-                      } catch (e) {
-                        displayName = testPlan.name || "Test Plan";
-                      }
-                      
-                      return (
-                        <tr key={testPlan.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-orange-50 dark:hover:bg-gray-700">
-                          <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{testPlan.id}</td>
-                          <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{displayName}</td>
-                          <td className="px-4 py-2">
-                            {testPlan.confluence_page_url ? (
-                              <a
-                                href={testPlan.confluence_page_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs transition"
-                              >
-                                <FaExternalLinkAlt /> View
-                              </a>
-                            ) : (
-                              <span className="text-gray-400">N/A</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Generate Stories Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-green-600 mb-4">Generate Stories</h2>
-          <div className="space-y-4">
+        {/* Generate Stories Tab */}
+        <AccordionTab header="Generate Stories" headerClassName="bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-100 font-bold py-6 text-xl border-2 border-green-300 dark:border-green-700 rounded-lg transition hover:bg-green-200 dark:hover:bg-green-800 hover:shadow-md mb-6">
+          <div className="space-y-10 pt-8 pb-8">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Select Epic {generatedEpics.length > 0 && <span className="text-purple-600">({generatedEpics.length})</span>}
+              <label className="block text-lg font-bold text-gray-800 dark:text-gray-200 mb-5">
+                <span>Select Epic</span> {generatedEpics.length > 0 && <span className="text-green-600 ml-2">({generatedEpics.length})</span>}
               </label>
               <Dropdown
                 value={epicIdForStories}
@@ -1568,36 +1474,36 @@ export default function AgenticAIPage() {
                 optionGroupLabel="label"
                 optionGroupChildren="items"
                 placeholder="-- Choose an epic --"
-                className="w-full p-3"
+                className="w-full text-base"
                 panelClassName="dark:bg-gray-700 dark:text-white"
                 showClear
               />
               {generatedEpics.length === 0 && uploadId && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                <p className="text-base text-gray-600 dark:text-gray-400 mt-4">
                   💡 Select an upload first - epic list will load automatically
                 </p>
               )}
               {!uploadId && (
-                <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
-                  ⚠️ Select an upload from the first card to load epics
+                <p className="text-base text-amber-600 dark:text-amber-400 mt-4">
+                  ⚠️ Select an upload from the first tab to load epics
                 </p>
               )}
             </div>
-            <div className="relative group">
+            <div className="relative group mt-6">
               <Button
                 onClick={handleGenerateStories}
                 disabled={loadingStories || !epicIdForStories || generatedStories.length > 0}
                 severity="success"
-                className="w-full"
+                className="w-full py-4 text-base font-semibold"
                 style={{ backgroundColor: '#22c55e', borderColor: '#22c55e' }}
                 icon={loadingStories ? undefined : "pi pi-arrow-right"}
                 loading={loadingStories}
                 label={loadingStories ? `Generating... ${storyProgress}%` : "Generate Stories"}
               />
               {storyProgress > 0 && loadingStories && (
-                <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="mt-4 w-full bg-gray-300 dark:bg-gray-600 rounded-full h-3">
                   <div 
-                    className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                    className="bg-green-500 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${storyProgress}%` }}
                   />
                 </div>
@@ -1608,114 +1514,143 @@ export default function AgenticAIPage() {
                 </div>
               )}
             </div>
-          </div>
+            {generatedStories.length === 0 && epicIdForStories && (
+              <p className="text-base text-gray-600 dark:text-gray-400 mt-4">
+                💡 No existing stories found. Generate stories from the selected epic.
+              </p>
+            )}
+            {!epicIdForStories && generatedEpics.length > 0 && (
+              <p className="text-base text-amber-600 dark:text-amber-400 mt-4">
+                ⚠️ Select an epic from the dropdown to load stories
+              </p>
+            )}
 
-          {generatedStories.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Generated Stories ({generatedStories.length})</h3>
-              <div className="overflow-x-auto overflow-y-auto rounded-lg max-h-96" style={{scrollbarWidth: 'thin'}}>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-green-100 dark:bg-green-900">
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white w-12">ID</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white flex-1">Name</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white w-28">Jira Link</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white w-28">Jira Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {generatedStories.map((story) => (
-                      <tr key={story.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-green-50 dark:hover:bg-gray-700">
-                        <td className="px-4 py-2 text-gray-900 dark:text-gray-100 w-12">{story.id}</td>
-                        <td className="px-4 py-2 text-gray-900 dark:text-gray-100 flex-1 truncate">{story.name || "Untitled"}</td>
-                        <td className="px-4 py-2 w-28">
-                          {(() => {
-                            const hasValidJiraInDB = story.jira_key && story.jira_url;
-                            const jiraKey = story.jira_key;
-                            
-                            if (hasValidJiraInDB) {
-                              return (
-                                <a
-                                  href={story.jira_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs transition whitespace-nowrap"
-                                >
-                                  <FaJira /> {jiraKey}
-                                </a>
-                              );
-                            }
-                            
-                            return (
-                              <span className="text-gray-400 text-xs">N/A</span>
-                            );
-                          })()}
-                        </td>
-                        <td className="px-4 py-2 w-28">
-                          {(() => {
-                            const isLoading = loadingJiraItems.has(`story_${story.id}`);
-                            const creationSuccess = story.jira_creation_success;
-                            
-                            if (isLoading) {
-                              return (
-                                <div className="inline-flex items-center gap-1 px-2 py-1 bg-gray-400 text-white rounded text-xs whitespace-nowrap">
-                                  <FaSpinner className="animate-spin" />
-                                  Creating...
-                                </div>
-                              );
-                            }
+            {generatedStories.length > 0 && (
+              <div className="pt-10 mt-10 border-t-2 border-gray-300 dark:border-gray-600">
+                <h3 className="font-bold text-2xl text-gray-900 dark:text-white mb-8 flex items-center gap-4">
+                  <span className="w-2 h-8 bg-green-500 rounded-full"></span>
+                  Generated Stories ({generatedStories.length})
+                </h3>
+                <DataTable
+                  value={generatedStories}
+                  emptyMessage="No stories generated"
+                  className="p-datatable-striped p-datatable-sm"
+                  responsiveLayout="scroll"
+                  stripedRows
+                  dataKey="id"
+                  scrollable
+                  scrollHeight="400px"
+                  style={{ borderRadius: '0.5rem' }}
+                >
+                  <Column
+                    field="id"
+                    header="ID"
+                    style={{ width: '80px' }}
+                    bodyClassName="text-gray-900 dark:text-gray-100 font-medium"
+                  />
+                  <Column
+                    field="name"
+                    header="Story Name"
+                    style={{ width: '250px' }}
+                    body={(rowData) => rowData.name || "Untitled"}
+                    bodyClassName="text-gray-900 dark:text-gray-100"
+                  />
+                  <Column
+                    header="Confluence"
+                    style={{ width: '130px' }}
+                    body={(rowData) => (
+                      rowData.confluence_page_url ? (
+                        <Button
+                          onClick={() => window.open(rowData.confluence_page_url, '_blank')}
+                          label="View"
+                          icon="pi pi-external-link"
+                          className="p-button-sm p-button-rounded"
+                          style={{ backgroundColor: '#22c55e', borderColor: '#22c55e' }}
+                          title="View on Confluence"
+                        />
+                      ) : (
+                        <span className="text-gray-400 text-sm">N/A</span>
+                      )
+                    )}
+                  />
+                  <Column
+                    header="Jira Link"
+                    style={{ width: '130px' }}
+                    body={(rowData) => (
+                      rowData.jira_url ? (
+                        <Button
+                          onClick={() => window.open(rowData.jira_url, '_blank')}
+                          label={rowData.jira_key || 'Open'}
+                          icon="pi pi-external-link"
+                          className="p-button-sm p-button-rounded"
+                          style={{ backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
+                          title="View on Jira"
+                        />
+                      ) : (
+                        <span className="text-gray-400 text-sm">N/A</span>
+                      )
+                    )}
+                  />
+                  <Column
+                    header="Jira Status"
+                    style={{ width: '140px' }}
+                    body={(rowData) => {
+                      const isLoading = loadingJiraItems.has(`story_${rowData.id}`);
+                      const creationSuccess = rowData.jira_creation_success;
+                      
+                      if (isLoading) {
+                        return (
+                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-gray-400 text-white rounded text-xs whitespace-nowrap">
+                            <FaSpinner className="animate-spin" />
+                            Creating...
+                          </div>
+                        );
+                      }
 
-                            if (creationSuccess === true) {
-                              return (
-                                <div className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs whitespace-nowrap" title="Jira creation successful">
-                                  <FaCheckCircle /> Success
-                                </div>
-                              );
-                            }
+                      if (creationSuccess === true) {
+                        return (
+                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs whitespace-nowrap" title="Jira creation successful">
+                            <FaCheckCircle /> Success
+                          </div>
+                        );
+                      }
 
-                            if (creationSuccess === false) {
-                              return (
-                                <div className="group relative inline-flex">
-                                  <button
-                                    onClick={() => {
-                                      console.log("Failed button clicked for story:", story.id);
-                                      retryCreateStoryInJira(story);
-                                    }}
-                                    type="button"
-                                    className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs whitespace-nowrap transition hover:cursor-pointer"
-                                    title="Click to retry creating this story in Jira"
-                                  >
-                                    <FaTimesCircle /> Failed
-                                  </button>
-                                  <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white rounded text-xs whitespace-nowrap z-10 pointer-events-none">
-                                    Click to retry
-                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-                                  </div>
-                                </div>
-                              );
-                            }
+                      if (creationSuccess === false) {
+                        return (
+                          <div className="group relative inline-flex">
+                            <button
+                              onClick={() => retryCreateStoryInJira(rowData)}
+                              type="button"
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs whitespace-nowrap transition hover:cursor-pointer"
+                              title="Click to retry creating this story in Jira"
+                            >
+                              <FaTimesCircle /> Failed
+                            </button>
+                            <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white rounded text-xs whitespace-nowrap z-10 pointer-events-none">
+                              Click to retry
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                            </div>
+                          </div>
+                        );
+                      }
 
-                            return (
-                              <span className="text-gray-400 text-xs">N/A</span>
-                            );
-                          })()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                      return (
+                        <span className="text-gray-400 text-sm">N/A</span>
+                      );
+                    }}
+                  />
+                </DataTable>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </AccordionTab>
 
-        {/* Generate QA Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-blue-600 mb-4">Generate QA Tests</h2>
-          <div className="space-y-4">
+        {/* Generate QA Tests Tab */}
+        <AccordionTab header="Generate QA Tests" headerClassName="bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100 font-bold py-6 text-xl border-2 border-blue-300 dark:border-blue-700 rounded-lg transition hover:bg-blue-200 dark:hover:bg-blue-800 hover:shadow-md mb-6">
+          <div className="space-y-10 pt-8 pb-8">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Select Story {generatedStories.length > 0 && <span className="text-blue-600">({generatedStories.length})</span>}
+              <label className="block text-lg font-bold text-gray-800 dark:text-gray-200 mb-5">
+                <span>Select Story</span> {generatedStories.length > 0 && <span className="text-blue-600 ml-2">({generatedStories.length})</span>}
               </label>
               <Dropdown
                 value={storyId}
@@ -1739,122 +1674,302 @@ export default function AgenticAIPage() {
                 optionGroupLabel="label"
                 optionGroupChildren="items"
                 placeholder="-- Choose a story --"
-                className="w-full p-3"
+                className="w-full text-base"
                 panelClassName="dark:bg-gray-700 dark:text-white"
                 showClear
               />
               {generatedStories.length === 0 && epicIdForStories && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  💡 No existing stories found. Generate stories from the selected epic.
+                <p className="text-base text-gray-600 dark:text-gray-400 mt-4">
+                  💡 No existing stories found. Generate stories from the Stories tab first.
                 </p>
               )}
               {!epicIdForStories && (
-                <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
-                  ⚠️ Select an epic from the Stories card first to load stories
+                <p className="text-base text-amber-600 dark:text-amber-400 mt-4">
+                  ⚠️ Select an epic from the Stories tab first to load stories
                 </p>
               )}
             </div>
-            <div className="relative group">
+            <div className="relative group mt-6">
               <Button
                 onClick={handleGenerateQA}
-                disabled={loadingQA || !storyId}
+                disabled={loadingQA || !storyId || (qaRegenerationAttempts[storyId] || 0) >= 3 || generatedQA.length > 50}
                 severity="success"
-                className="w-full"
+                className="w-full py-4 text-base font-semibold"
                 style={{ backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
                 icon={loadingQA ? undefined : "pi pi-arrow-right"}
                 loading={loadingQA}
                 label={loadingQA ? `Generating... ${qaProgress}%` : generatedQA.length > 0 ? "Regenerate QA Tests" : "Generate QA Tests"}
               />
               {qaProgress > 0 && loadingQA && (
-                <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="mt-4 w-full bg-gray-300 dark:bg-gray-600 rounded-full h-3">
                   <div 
-                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                    className="bg-blue-500 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${qaProgress}%` }}
                   />
                 </div>
               )}
+              {(qaRegenerationAttempts[storyId] || 0) >= 3 && (
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-10 font-medium">
+                  Max 3 regeneration attempts reached
+                </div>
+              )}
+              {generatedQA.length > 50 && (
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-10 font-medium">
+                  Max 50 QA tests reached
+                </div>
+              )}
             </div>
             {generatedQA.length === 0 && storyId && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-base text-gray-600 dark:text-gray-400 mt-4">
                 💡 No existing QA tests found. Generate QA tests from the selected story.
               </p>
             )}
             {!storyId && generatedStories.length > 0 && (
-              <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
+              <p className="text-base text-amber-600 dark:text-amber-400 mt-4">
                 ⚠️ Select a story from the dropdown to load QA tests
               </p>
             )}
-          </div>
+            {storyId && (qaRegenerationAttempts[storyId] || 0) > 0 && (qaRegenerationAttempts[storyId] || 0) < 3 && generatedQA.length <= 50 && (
+              <p className="text-base text-blue-600 dark:text-blue-400 mt-4 font-semibold">
+                ℹ️ Regeneration attempts: {qaRegenerationAttempts[storyId] || 0}/3 (Max 3 allowed) | QA Tests: {generatedQA.length}/50
+              </p>
+            )}
+            {storyId && (qaRegenerationAttempts[storyId] || 0) >= 3 && generatedQA.length <= 50 && (
+              <p className="text-base text-red-600 dark:text-red-400 mt-4 font-bold">
+                ❌ Maximum regeneration attempts (3) reached. Select a different story to continue.
+              </p>
+            )}
+            {storyId && generatedQA.length > 50 && (
+              <p className="text-base text-red-600 dark:text-red-400 mt-4 font-bold">
+                ❌ Maximum QA tests count (50) reached. Please visit the QA Page to manage existing tests.
+              </p>
+            )}
+            {storyId && (qaRegenerationAttempts[storyId] || 0) >= 3 && generatedQA.length > 50 && (
+              <p className="text-base text-red-600 dark:text-red-400 mt-4 font-bold">
+                ❌ Maximum regeneration attempts (3) AND maximum QA tests count (50) reached. Please select a different story or manage existing tests.
+              </p>
+            )}
 
-          {generatedQA.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Generated QA Tests ({generatedQA.length})</h3>
-              
-              {/* Simple QA Tests Table - Filtering now in QAPage */}
-              <div className="overflow-x-auto overflow-y-auto rounded-lg max-h-96" style={{scrollbarWidth: 'thin'}}>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-blue-100 dark:bg-blue-900 sticky top-0">
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white w-12">ID</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">Title</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white w-32">Test Type</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {generatedQA.map((qa) => {
-                      // Extract title from content if it's JSON
+            {generatedQA.length > 0 && (
+              <div className="pt-10 mt-10 border-t-2 border-gray-300 dark:border-gray-600">
+                <h3 className="font-bold text-2xl text-gray-900 dark:text-white mb-8 flex items-center gap-4">
+                  <span className="w-2 h-8 bg-blue-500 rounded-full"></span>
+                  Generated QA Tests ({generatedQA.length})
+                </h3>
+                
+                <DataTable
+                  value={generatedQA}
+                  emptyMessage="No QA tests generated"
+                  className="p-datatable-striped p-datatable-sm"
+                  responsiveLayout="scroll"
+                  stripedRows
+                  dataKey="id"
+                  scrollable
+                  scrollHeight="400px"
+                  style={{ borderRadius: '0.5rem' }}
+                >
+                  <Column
+                    field="id"
+                    header="ID"
+                    style={{ width: '80px' }}
+                    bodyClassName="text-gray-900 dark:text-gray-100 font-medium"
+                  />
+                  <Column
+                    header="Title"
+                    style={{ width: '250px' }}
+                    body={(rowData) => {
                       let displayTitle = "QA Test";
                       try {
-                        if (typeof qa.content === 'string') {
-                          const parsed = JSON.parse(qa.content);
+                        if (typeof rowData.content === 'string') {
+                          const parsed = JSON.parse(rowData.content);
                           displayTitle = parsed.title || parsed.name || "QA Test";
-                        } else if (qa.content?.title) {
-                          displayTitle = qa.content.title;
-                        } else if (qa.content?.name) {
-                          displayTitle = qa.content.name;
+                        } else if (rowData.content?.title) {
+                          displayTitle = rowData.content.title;
+                        } else if (rowData.content?.name) {
+                          displayTitle = rowData.content.name;
                         }
                       } catch (e) {
-                        displayTitle = String(qa.content).substring(0, 50);
+                        displayTitle = String(rowData.content).substring(0, 50);
                       }
-                      
-                      const story = generatedStories.find(s => s.id === qa.story_id);
-                      const storyName = story?.name || `Story ${qa.story_id}`;
-                      
+                      return displayTitle;
+                    }}
+                    bodyClassName="text-gray-900 dark:text-gray-100"
+                  />
+                  <Column
+                    header="Test Type"
+                    style={{ width: '140px' }}
+                    body={(rowData) => {
+                      const testType = rowData.test_type || rowData.content?.type || "functional";
+                      const typeColors = {
+                        "functional": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                        "non_functional": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                        "api": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                      };
+                      const colorClass = typeColors[testType] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
                       return (
-                        <tr key={qa.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition">
-                          <td className="px-4 py-2 text-gray-900 dark:text-gray-100 w-12">{qa.id}</td>
-                          <td className="px-4 py-2 text-gray-900 dark:text-gray-100 truncate">{displayTitle}</td>
-                          <td className="px-4 py-2 text-sm w-32">
-                            {(() => {
-                              const testType = qa.test_type || qa.content?.type || "functional";
-                              const typeColors = {
-                                "functional": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-                                "non_functional": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-                                "api": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-                              };
-                              const colorClass = typeColors[testType] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
-                              return (
-                                <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${colorClass}`}>
-                                  {testType.replace("_", " ").toUpperCase()}
-                                </span>
-                              );
-                            })()}
-                          </td>
-                        </tr>
+                        <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${colorClass}`}>
+                          {testType.replace("_", " ").toUpperCase()}
+                        </span>
                       );
-                    })}
-                  </tbody>
-                </table>
+                    }}
+                  />
+                </DataTable>
+                <p className="text-base text-gray-600 dark:text-gray-400 mt-6 font-medium">
+                  💡 For detailed filtering and analysis of QA tests, visit the <a href="/qa" className="font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline">QA Page</a>
+                </p>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                💡 For detailed filtering and analysis of QA tests, visit the <span className="font-semibold">QA Page</span>
-              </p>
+            )}
+          </div>
+        </AccordionTab>
+
+        {/* Generate Test Plans Tab */}
+        <AccordionTab header="Generate Test Plans" headerClassName="bg-orange-100 dark:bg-orange-900 text-orange-900 dark:text-orange-100 font-bold py-6 text-xl border-2 border-orange-300 dark:border-orange-700 rounded-lg transition hover:bg-orange-200 dark:hover:bg-orange-800 hover:shadow-md mb-6">
+          <div className="space-y-10 pt-8 pb-8">
+            <div>
+              <label className="block text-lg font-bold text-gray-800 dark:text-gray-200 mb-5">
+                <span>Select Epic</span> {generatedEpics.length > 0 && <span className="text-orange-600 ml-2">({generatedEpics.length})</span>}
+              </label>
+              <Dropdown
+                value={epicIdForTestPlan}
+                onChange={(e) => handleEpicForTestPlanChange({ target: { value: e.value } })}
+                options={[
+                  recentEpics.length > 0 ? {
+                    label: "📌 Recent Epics",
+                    items: recentEpics.map((epic) => ({
+                      label: `⭐ ${epic.name} (ID: ${epic.id})`,
+                      value: epic.id
+                    }))
+                  } : null,
+                  generatedEpics.length > 0 ? {
+                    label: "All Epics",
+                    items: generatedEpics.map((epic) => ({
+                      label: `${epic.name} (ID: ${epic.id})`,
+                      value: epic.id
+                    }))
+                  } : null
+                ].filter(Boolean)}
+                optionGroupLabel="label"
+                optionGroupChildren="items"
+                placeholder="-- Choose an epic --"
+                className="w-full text-base"
+                panelClassName="dark:bg-gray-700 dark:text-white"
+                showClear
+              />
+              {generatedEpics.length === 0 && uploadId && (
+                <p className="text-base text-gray-600 dark:text-gray-400 mt-4">
+                  💡 Generate epics first to create test plans
+                </p>
+              )}
+              {!uploadId && (
+                <p className="text-base text-amber-600 dark:text-amber-400 mt-4">
+                  ⚠️ Select an upload from the first tab to load epics
+                </p>
+              )}
             </div>
-          )}
-        </div>
+            <div className="relative group mt-6">
+              <Button
+                onClick={handleGenerateTestPlan}
+                disabled={loadingTestPlan || !epicIdForTestPlan || generatedTestPlans.length > 0}
+                severity="success"
+                className="w-full py-4 text-base font-semibold"
+                style={{ backgroundColor: '#f97316', borderColor: '#f97316' }}
+                icon={loadingTestPlan ? undefined : "pi pi-arrow-right"}
+                loading={loadingTestPlan}
+                label={loadingTestPlan ? `Generating... ${testPlanProgress}%` : "Generate Test Plan"}
+              />
+              {testPlanProgress > 0 && loadingTestPlan && (
+                <div className="mt-4 w-full bg-gray-300 dark:bg-gray-600 rounded-full h-3">
+                  <div 
+                    className="bg-orange-500 h-3 rounded-full transition-all duration-300"
+                    style={{ width: `${testPlanProgress}%` }}
+                  />
+                </div>
+              )}
+              {generatedTestPlans.length > 0 && (
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-10 font-medium">
+                  Test Plans already present
+                </div>
+              )}
+            </div>
+            {generatedTestPlans.length === 0 && epicIdForTestPlan && (
+              <p className="text-base text-gray-600 dark:text-gray-400 mt-4">
+                💡 No existing test plans found. Generate test plans from the selected epic.
+              </p>
+            )}
+            {!epicIdForTestPlan && generatedEpics.length > 0 && (
+              <p className="text-base text-amber-600 dark:text-amber-400 mt-4">
+                ⚠️ Select an epic from the dropdown to load test plans
+              </p>
+            )}
 
-
-      </div>
+            {generatedTestPlans.length > 0 && (
+              <div className="pt-10 mt-10 border-t-2 border-gray-300 dark:border-gray-600">
+                <h3 className="font-bold text-2xl text-gray-900 dark:text-white mb-8 flex items-center gap-4">
+                  <span className="w-2 h-8 bg-orange-500 rounded-full"></span>
+                  Generated Test Plans ({generatedTestPlans.length})
+                </h3>
+                <DataTable
+                  value={generatedTestPlans}
+                  emptyMessage="No test plans generated"
+                  className="p-datatable-striped p-datatable-sm"
+                  responsiveLayout="scroll"
+                  stripedRows
+                  dataKey="id"
+                  scrollable
+                  scrollHeight="400px"
+                  style={{ borderRadius: '0.5rem' }}
+                >
+                  <Column
+                    field="id"
+                    header="ID"
+                    style={{ width: '80px' }}
+                    bodyClassName="text-gray-900 dark:text-gray-100 font-medium"
+                  />
+                  <Column
+                    header="Title"
+                    style={{ width: '300px' }}
+                    body={(rowData) => {
+                      let displayName = "Test Plan";
+                      try {
+                        if (typeof rowData.content === 'string') {
+                          const parsed = JSON.parse(rowData.content);
+                          displayName = parsed.title || parsed.name || "Test Plan";
+                        } else if (rowData.content?.title) {
+                          displayName = rowData.content.title;
+                        } else if (rowData.content?.name) {
+                          displayName = rowData.content.name;
+                        }
+                      } catch (e) {
+                        displayName = rowData.name || "Test Plan";
+                      }
+                      return displayName;
+                    }}
+                    bodyClassName="text-gray-900 dark:text-gray-100"
+                  />
+                  <Column
+                    header="Confluence Link"
+                    style={{ width: '130px' }}
+                    body={(rowData) => (
+                      rowData.confluence_page_url ? (
+                        <Button
+                          onClick={() => window.open(rowData.confluence_page_url, '_blank')}
+                          label="View"
+                          icon="pi pi-external-link"
+                          className="p-button-sm p-button-rounded"
+                          style={{ backgroundColor: '#f97316', borderColor: '#f97316' }}
+                          title="View on Confluence"
+                        />
+                      ) : (
+                        <span className="text-gray-400 text-sm">N/A</span>
+                      )
+                    )}
+                  />
+                </DataTable>
+              </div>
+            )}
+          </div>
+        </AccordionTab>
+      </Accordion>
     </div>
   );
 }
