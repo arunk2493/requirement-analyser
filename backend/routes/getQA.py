@@ -37,6 +37,8 @@ def get_qa(story_id: int, current_user: TokenData = Depends(get_current_user)):
         for qa in qa_tests:
             qa_data = {
                 "id": qa.id,
+                "story_id": qa.story_id,
+                "test_type": qa.test_type,
                 "content": qa.content,
                 "created_at": qa.created_at
             }

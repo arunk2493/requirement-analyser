@@ -47,6 +47,8 @@ export default function AgenticAIPage() {
   const [loadingJiraItems, setLoadingJiraItems] = useState(new Set()); // Track loading per item
   const [jiraResults, setJiraResults] = useState({});
 
+  // QA filtering moved to dedicated QAPage component
+
   // Fetch user's uploads on component mount and when user logs in
   useEffect(() => {
     const fetchUserUploads = async () => {
@@ -372,6 +374,130 @@ export default function AgenticAIPage() {
     }
   };
 
+  // Retry creating a single story in Jira
+  const retryCreateStoryInJira = async (story) => {
+    console.log("Retry button clicked for story:", story.id, story.name);
+    console.log("Story object:", story);
+    
+    // Check for Jira credentials
+    const savedJiraCredentials = localStorage.getItem("jira_credentials");
+    if (!savedJiraCredentials) {
+      console.error("No Jira credentials found");
+      const errorMsg = "❌ Jira credentials not configured. Please configure Jira integration first.";
+      showMessage("error", errorMsg);
+      return;
+    }
+
+    let credentials;
+    try {
+      credentials = JSON.parse(savedJiraCredentials);
+      console.log("Parsed Jira credentials");
+    } catch (e) {
+      console.error("Failed to parse credentials:", e);
+      const errorMsg = "❌ Invalid Jira credentials. Please reconfigure Jira integration.";
+      showMessage("error", errorMsg);
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      const errorMsg = "❌ Not authenticated. Please login first.";
+      showMessage("error", errorMsg);
+      return;
+    }
+
+    try {
+      console.log("Setting loading state for story:", story.id);
+      setLoadingJiraItems(prev => new Set([...prev, `story_${story.id}`]));
+      
+      const acceptanceCriteria = story.acceptanceCriteria || story.content?.acceptanceCriteria || [];
+      console.log(`Retrying story creation for ${story.name}:`, { acceptanceCriteria, storyContent: story.content });
+      
+      // Get epic_id - it might be stored directly or in the story object
+      const epicId = story.epic_id || Number.parseInt(epicIdForStories);
+      console.log("Epic ID for story:", epicId);
+      
+      // Find the parent epic for this story
+      const parentEpic = generatedEpics.find(e => e.id === epicId);
+      console.log("Parent epic found:", parentEpic);
+      
+      if (!parentEpic) {
+        const errorMsg = "❌ Parent epic not found. Please refresh the page and try again.";
+        showMessage("error", errorMsg);
+        return;
+      }
+      
+      if (!parentEpic.jira_issue_id) {
+        const errorMsg = "❌ Parent epic not created in Jira. Please create the epic first.";
+        showMessage("error", errorMsg);
+        return;
+      }
+      
+      console.log("Making API call to create-story-jira with:", {
+        epic_jira_issue_id: parentEpic.jira_issue_id,
+        epic_jira_key: parentEpic.jira_key,
+        final_story_name: story.name,
+        story_description: story.description || story.content?.description,
+      });
+      
+      const response = await fetch(`${API_BASE_URL}/api/jira/create-story-jira`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jira_url: credentials.jira_url,
+          jira_username: credentials.jira_username,
+          jira_api_token: credentials.jira_api_token,
+          jira_project_key: credentials.jira_project_key,
+          epic_jira_issue_id: parentEpic.jira_issue_id,
+          epic_jira_key: parentEpic.jira_key,
+          final_story_name: story.name || "Untitled Story",
+          story_description: story.description || story.content?.description || "",
+          story_acceptance_criteria: acceptanceCriteria.join("\n") || "",
+          story_id: story.id,
+        }),
+      });
+
+      const data = await response.json();
+      console.log("API Response:", response.status, data);
+
+      if (response.ok) {
+        console.log("Story created successfully");
+        setJiraResults(prev => ({
+          ...prev,
+          [`story_${story.id}`]: { key: data.key, url: data.url }
+        }));
+        const successMsg = `✅ Story "${story.name}" created in Jira successfully!`;
+        showMessage("success", successMsg);
+        console.log(successMsg);
+        
+        // Refresh stories to get persisted Jira data
+        const epicId = story.epic_id || Number.parseInt(epicIdForStories);
+        if (epicId) {
+          console.log("Refreshing stories for epic:", epicId);
+          await fetchStories(epicId);
+        }
+      } else {
+        console.error(`Failed to create story ${story.name}:`, data);
+        const errorMsg = `❌ Failed to create story: ${data.detail || data.errors?.description || "Unknown error"}`;
+        showMessage("error", errorMsg);
+      }
+    } catch (err) {
+      console.error(`Failed to retry story creation for ${story.name}:`, err);
+      const errorMsg = `❌ Error: ${err.message || "Failed to create story. Please try again."}`;
+      showMessage("error", errorMsg);
+    } finally {
+      console.log("Clearing loading state for story:", story.id);
+      setLoadingJiraItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`story_${story.id}`);
+        return newSet;
+      });
+    }
+  };
+
   // Create all stories in Jira as subtasks under epic
   const createStoriesInJira = async (stories, epicId, epic) => {
     const token = localStorage.getItem("token");
@@ -636,7 +762,7 @@ export default function AgenticAIPage() {
       setLoadingStories(true);
       setStoryProgress(10);
       
-      const res = await generateStoriesAgent(parseInt(epicIdForStories));
+      const res = await generateStoriesAgent(Number.parseInt(epicIdForStories));
       setStoryProgress(50);
       
       const stories = res.data.data?.stories || [];
@@ -648,14 +774,50 @@ export default function AgenticAIPage() {
       // Auto-create stories in Jira if credentials are configured
       if (jiraCredentials) {
         // Get the epic to pass Jira issue ID for parent linking
-        const epic = generatedEpics.find(e => e.id === parseInt(epicIdForStories));
+        const epic = generatedEpics.find(e => e.id === Number.parseInt(epicIdForStories));
         if (epic && epic.jira_issue_id) {
           await createStoriesInJira(stories, epicIdForStories, epic);
         } else {
-          showMessage("info", "ℹ️ Parent epic not created in Jira. Set up the epic in Jira first to link stories.");
+          showMessage("warning", "⚠️ Parent epic not created in Jira. Stories marked as failed. Set up the epic in Jira first to link stories.");
+          // Mark all stories as failed
+          const token = localStorage.getItem("token");
+          for (const story of stories) {
+            try {
+              await fetch(`${API_BASE_URL}/api/jira/mark-story-failed`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  story_id: story.id,
+                }),
+              });
+            } catch (err) {
+              console.error(`Failed to mark story ${story.id} as failed:`, err);
+            }
+          }
         }
       } else {
-        showMessage("info", "ℹ️ Jira credentials not configured. Set up Jira integration to automatically create stories.");
+        showMessage("warning", "⚠️ Jira credentials not configured. Stories marked as failed. Set up Jira integration to create stories.");
+        // Mark all stories as failed
+        const token = localStorage.getItem("token");
+        for (const story of stories) {
+          try {
+            await fetch(`${API_BASE_URL}/api/jira/mark-story-failed`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                story_id: story.id,
+              }),
+            });
+          } catch (err) {
+            console.error(`Failed to mark story ${story.id} as failed:`, err);
+          }
+        }
       }
       
       // Refresh the stories list
@@ -744,14 +906,24 @@ export default function AgenticAIPage() {
       const res = await generateQAAgent(parseInt(storyId));
       setQAProgress(50);
       
+      console.log("Generate QA response:", res.data);
       const qa = res.data.data?.qa_tests || res.data.data?.qa || [];
-      setGeneratedQA(qa);
+      console.log("QA tests from generate response:", qa);
+      
+      if (qa && qa.length > 0) {
+        setGeneratedQA(qa);
+        console.log("Set generatedQA to:", qa);
+      } else {
+        console.warn("No QA tests in response");
+      }
+      
       setQAProgress(75);
       
       showMessage("success", "✅ QA tests generated successfully!");
       // Refresh the QA list
       await fetchQA(storyId);
     } catch (e) {
+      console.error("Generate QA error:", e);
       showMessage("error", e.response?.data?.detail?.error || e.response?.data?.detail || "Failed to generate QA tests");
     } finally {
       setLoadingQA(false);
@@ -765,21 +937,44 @@ export default function AgenticAIPage() {
     console.log("Fetching QA for story:", sId);
     try {
       const res = await getQAAgent(parseInt(sId));
-      console.log("QA response:", res.data);
-      const qa = res.data.data?.qa_tests || res.data.data?.qa || [];
-      console.log("QA tests to display:", qa);
+      console.log("QA full response:", res.data);
+      
+      // Extract qa_tests from the response - handle different response structures
+      let qa = [];
+      if (res.data?.data?.qa_tests) {
+        qa = res.data.data.qa_tests;
+      } else if (res.data?.qa_tests) {
+        qa = res.data.qa_tests;
+      } else if (Array.isArray(res.data?.data)) {
+        qa = res.data.data;
+      } else if (Array.isArray(res.data)) {
+        qa = res.data;
+      }
+      
+      console.log("Extracted QA tests:", qa);
+      
+      if (!Array.isArray(qa)) {
+        console.error("QA tests is not an array:", qa);
+        qa = [];
+      }
+      
       // Merge with existing QA to preserve data (avoid duplicates by ID)
       setGeneratedQA(prevQA => {
+        console.log("Previous QA:", prevQA);
         const existingMap = new Map(prevQA.map(q => [q.id, q]));
         qa.forEach(qaItem => {
           existingMap.set(qaItem.id, qaItem); // Update with latest data
         });
-        return Array.from(existingMap.values());
+        const merged = Array.from(existingMap.values());
+        console.log("Merged QA:", merged);
+        return merged;
       });
+      
       // Add each QA to recent list
       qa.forEach(qaItem => {
         addToRecent(setRecentQA, qaItem, recentQA);
       });
+      
       if (qa.length === 0) {
         console.warn("No QA tests returned for story", sId);
       }
@@ -787,7 +982,10 @@ export default function AgenticAIPage() {
       console.error("Failed to fetch QA:", error);
       const errorMsg = error.response?.data?.detail?.error || error.response?.data?.detail || error.message || "Failed to fetch QA";
       console.error("Detailed error:", errorMsg);
-      showMessage("error", `Could not load QA tests: ${errorMsg}`);
+      // Don't show error message for 404, it's expected when no QA tests exist yet
+      if (error.response?.status !== 404) {
+        showMessage("error", `Could not load QA tests: ${errorMsg}`);
+      }
     }
   };
 
@@ -1014,7 +1212,7 @@ export default function AgenticAIPage() {
           {generatedEpics.length > 0 && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Generated Epics ({generatedEpics.length})</h3>
-              <div className="overflow-x-auto rounded-lg">
+              <div className="overflow-x-auto overflow-y-auto rounded-lg max-h-96" style={{scrollbarWidth: 'thin'}}>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-purple-100 dark:bg-purple-900">
@@ -1211,7 +1409,7 @@ export default function AgenticAIPage() {
           {generatedTestPlans.length > 0 && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Generated Test Plans ({generatedTestPlans.length})</h3>
-              <div className="overflow-x-auto rounded-lg">
+              <div className="overflow-x-auto overflow-y-auto rounded-lg max-h-96" style={{scrollbarWidth: 'thin'}}>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-orange-100 dark:bg-orange-900">
@@ -1336,7 +1534,7 @@ export default function AgenticAIPage() {
           {generatedStories.length > 0 && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Generated Stories ({generatedStories.length})</h3>
-              <div className="overflow-x-auto rounded-lg">
+              <div className="overflow-x-auto overflow-y-auto rounded-lg max-h-96" style={{scrollbarWidth: 'thin'}}>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-green-100 dark:bg-green-900">
@@ -1347,7 +1545,7 @@ export default function AgenticAIPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {generatedStories.slice(0, 5).map((story) => (
+                    {generatedStories.map((story) => (
                       <tr key={story.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-green-50 dark:hover:bg-gray-700">
                         <td className="px-4 py-2 text-gray-900 dark:text-gray-100 w-12">{story.id}</td>
                         <td className="px-4 py-2 text-gray-900 dark:text-gray-100 flex-1 truncate">{story.name || "Untitled"}</td>
@@ -1398,8 +1596,22 @@ export default function AgenticAIPage() {
 
                             if (creationSuccess === false) {
                               return (
-                                <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs whitespace-nowrap" title="Jira creation failed">
-                                  <FaExclamationCircle /> Failed
+                                <div className="group relative inline-flex">
+                                  <button
+                                    onClick={() => {
+                                      console.log("Failed button clicked for story:", story.id);
+                                      retryCreateStoryInJira(story);
+                                    }}
+                                    type="button"
+                                    className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs whitespace-nowrap transition hover:cursor-pointer"
+                                    title="Click to retry creating this story in Jira"
+                                  >
+                                    <FaExclamationCircle /> Failed
+                                  </button>
+                                  <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white rounded text-xs whitespace-nowrap z-10 pointer-events-none">
+                                    Click to retry
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                  </div>
                                 </div>
                               );
                             }
@@ -1465,11 +1677,11 @@ export default function AgenticAIPage() {
             <div className="relative group">
               <button
                 onClick={handleGenerateQA}
-                disabled={loadingQA || !storyId || generatedQA.length > 0}
+                disabled={loadingQA || !storyId}
                 className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
               >
                 {loadingQA ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}
-                {loadingQA ? `Generating... ${qaProgress}%` : "Generate QA Tests"}
+                {loadingQA ? `Generating... ${qaProgress}%` : generatedQA.length > 0 ? "Regenerate QA Tests" : "Generate QA Tests"}
               </button>
               {qaProgress > 0 && loadingQA && (
                 <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -1477,11 +1689,6 @@ export default function AgenticAIPage() {
                     className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${qaProgress}%` }}
                   />
-                </div>
-              )}
-              {generatedQA.length > 0 && (
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-10">
-                  QA Tests already present
                 </div>
               )}
             </div>
@@ -1499,17 +1706,20 @@ export default function AgenticAIPage() {
 
           {generatedQA.length > 0 && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Generated QA Tests ({generatedQA.length})</h3>
-              <div className="overflow-x-auto rounded-lg">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Generated QA Tests ({generatedQA.length})</h3>
+              
+              {/* Simple QA Tests Table - Filtering now in QAPage */}
+              <div className="overflow-x-auto overflow-y-auto rounded-lg max-h-96" style={{scrollbarWidth: 'thin'}}>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-blue-100 dark:bg-blue-900">
-                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">ID</th>
+                    <tr className="bg-blue-100 dark:bg-blue-900 sticky top-0">
+                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white w-12">ID</th>
                       <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white">Title</th>
+                      <th className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-white w-32">Test Type</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {generatedQA.slice(0, 5).map((qa) => {
+                    {generatedQA.map((qa) => {
                       // Extract title from content if it's JSON
                       let displayTitle = "QA Test";
                       try {
@@ -1525,16 +1735,38 @@ export default function AgenticAIPage() {
                         displayTitle = String(qa.content).substring(0, 50);
                       }
                       
+                      const story = generatedStories.find(s => s.id === qa.story_id);
+                      const storyName = story?.name || `Story ${qa.story_id}`;
+                      
                       return (
-                        <tr key={qa.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700">
-                          <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{qa.id}</td>
-                          <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{displayTitle}</td>
+                        <tr key={qa.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition">
+                          <td className="px-4 py-2 text-gray-900 dark:text-gray-100 w-12">{qa.id}</td>
+                          <td className="px-4 py-2 text-gray-900 dark:text-gray-100 truncate">{displayTitle}</td>
+                          <td className="px-4 py-2 text-sm w-32">
+                            {(() => {
+                              const testType = qa.test_type || qa.content?.type || "functional";
+                              const typeColors = {
+                                "functional": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                                "non_functional": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                                "api": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                              };
+                              const colorClass = typeColors[testType] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+                              return (
+                                <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${colorClass}`}>
+                                  {testType.replace("_", " ").toUpperCase()}
+                                </span>
+                              );
+                            })()}
+                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                💡 For detailed filtering and analysis of QA tests, visit the <span className="font-semibold">QA Page</span>
+              </p>
             </div>
           )}
         </div>

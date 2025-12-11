@@ -65,6 +65,7 @@ class QA(Base):
     story_id = Column(Integer, ForeignKey("stories.id", ondelete="CASCADE"), nullable=True)
     epic_id = Column(Integer, ForeignKey("epics.id", ondelete="CASCADE"), nullable=True)
     type = Column(String(50))  # test_plan, api_test, automation_script
+    test_type = Column(String(50), nullable=True)  # functional, non_functional, api
     content = Column(JSONB)
     confluence_page_id = Column(String(255), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())

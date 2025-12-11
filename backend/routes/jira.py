@@ -555,3 +555,43 @@ async def mark_epic_failed(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error marking epic as failed: {str(e)}",
         )
+
+
+class MarkStoryFailedRequest(BaseModel):
+    story_id: int
+
+
+@router.post("/mark-story-failed")
+async def mark_story_failed(
+    request: MarkStoryFailedRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Mark a story as failed in Jira creation (for audit trail)"""
+    try:
+        story = db.query(Story).filter(Story.id == request.story_id).first()
+        if not story:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Story not found",
+            )
+        
+        # Mark as failed
+        story.jira_creation_success = False
+        db.commit()
+        
+        logger.info(f"Marked story {request.story_id} as failed in Jira creation")
+        return {
+            "status": "success",
+            "message": "Story marked as failed",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error marking story as failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error marking story as failed: {str(e)}",
+        )
+

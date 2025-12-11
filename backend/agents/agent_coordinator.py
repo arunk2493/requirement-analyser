@@ -277,6 +277,7 @@ class AgentCoordinator:
                         qa_data = {
                             "id": q.id,
                             "story_id": q.story_id,
+                            "test_type": q.test_type,
                             "content": q.content if isinstance(q.content, (dict, str)) else str(q.content),
                             "created_at": str(q.created_at) if q.created_at else None
                         }

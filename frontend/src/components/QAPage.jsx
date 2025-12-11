@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchAllQA } from "../api/api";
-import { FaCheckSquare, FaSpinner, FaSync, FaChevronLeft, FaChevronRight, FaSortUp, FaSortDown, FaCode, FaCopy, FaTimes } from "react-icons/fa";
+import { FaCheckSquare, FaSpinner, FaSync, FaChevronLeft, FaChevronRight, FaSortUp, FaSortDown, FaCode, FaCopy, FaTimes, FaFilter } from "react-icons/fa";
 
 export default function QAPage() {
   const [qa, setQA] = useState([]);
@@ -15,6 +15,9 @@ export default function QAPage() {
   const [expandedScripts, setExpandedScripts] = useState({});
   const [scriptLanguage, setScriptLanguage] = useState({});
   const [copyNotification, setCopyNotification] = useState(null);
+  const [selectedTestTypes, setSelectedTestTypes] = useState([]);
+  const [selectedStories, setSelectedStories] = useState([]);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const pageSize = 10;
 
   const loadQA = async (page = 1) => {
@@ -192,9 +195,135 @@ public class ${className}Test {
       {/* QA Table */}
       {!loading && qa.length > 0 && (
         <div className="space-y-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Total QA Tests: <span className="font-bold text-gray-900 dark:text-white">{totalQATests}</span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Total QA Tests: <span className="font-bold text-gray-900 dark:text-white">{totalQATests}</span>
+            </div>
+            <button
+              onClick={() => setShowFilterPanel(!showFilterPanel)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
+              title="Toggle filters"
+            >
+              <FaFilter />
+              Filters
+            </button>
           </div>
+
+          {/* Filter Panel */}
+          {showFilterPanel && (
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 space-y-4">
+              
+              {/* Filter by Story */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Filter by Story
+                </label>
+                <select
+                  multiple
+                  value={selectedStories}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+                    setSelectedStories(selected);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {Array.from(new Set(qa.map(test => test.story_id))).map((storyId) => (
+                    <option key={storyId} value={storyId}>
+                      Story {storyId}
+                    </option>
+                  ))}
+                </select>
+                {selectedStories.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setSelectedStories([]);
+                      setCurrentPage(1);
+                    }}
+                    className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Clear story filter
+                  </button>
+                )}
+              </div>
+
+              {/* Filter by Test Type */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Filter by Test Type
+                </label>
+                <div className="space-y-2 p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-600">
+                  {["functional", "non_functional", "api"].map((testType) => {
+                    const testTypeCount = qa.filter(test => (test.test_type || test.content?.type || "functional") === testType).length;
+                    const typeColors = {
+                      "functional": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                      "non_functional": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                      "api": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                    };
+                    const colorClass = typeColors[testType] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+                    
+                    return (
+                      <label key={testType} className="flex items-center gap-3 p-2 hover:bg-blue-50 dark:hover:bg-gray-800 rounded cursor-pointer transition">
+                        <input
+                          type="checkbox"
+                          checked={selectedTestTypes.includes(testType)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedTestTypes([...selectedTestTypes, testType]);
+                            } else {
+                              setSelectedTestTypes(selectedTestTypes.filter(type => type !== testType));
+                            }
+                            setCurrentPage(1);
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 cursor-pointer accent-blue-600"
+                        />
+                        <span className={`text-xs font-semibold px-2 py-1 rounded ${colorClass}`}>
+                          {testType.replace("_", " ").toUpperCase()}
+                        </span>
+                        <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded ml-auto">
+                          {testTypeCount}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {selectedTestTypes.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setSelectedTestTypes([]);
+                      setCurrentPage(1);
+                    }}
+                    className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Clear type filter
+                  </button>
+                )}
+              </div>
+
+              {/* Active Filters Summary */}
+              {(selectedStories.length > 0 || selectedTestTypes.length > 0) && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Active Filters:</span>
+                    {selectedStories.length > 0 && (
+                      <span className="ml-2">
+                        {selectedStories.length} {selectedStories.length === 1 ? 'story' : 'stories'}
+                      </span>
+                    )}
+                    {selectedStories.length > 0 && selectedTestTypes.length > 0 && (
+                      <span className="mx-2">•</span>
+                    )}
+                    {selectedTestTypes.length > 0 && (
+                      <span>
+                        {selectedTestTypes.length} {selectedTestTypes.length === 1 ? 'test type' : 'test types'}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="overflow-x-auto rounded-lg shadow">
             <table className="w-full border-collapse bg-white dark:bg-gray-800">
               <thead>
@@ -214,6 +343,7 @@ public class ${className}Test {
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Test Case Title</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Test Type</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Description</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
                     <button className="flex items-center gap-2" onClick={() => {
@@ -233,11 +363,33 @@ public class ${className}Test {
                 </tr>
               </thead>
               <tbody>
-                {qa.map((test) => (
+                {qa
+                  .filter(test => {
+                    if (selectedTestTypes.length === 0) return true;
+                    const testType = test.test_type || test.content?.type || "functional";
+                    return selectedTestTypes.includes(testType);
+                  })
+                  .map((test) => (
                     <tr key={test.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition">
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-medium">{test.id}</td>
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-semibold">
                         {getTestTitle(test)}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        {(() => {
+                          const testType = test.test_type || test.content?.type || "functional";
+                          const typeColors = {
+                            "functional": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                            "non_functional": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                            "api": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                          };
+                          const colorClass = typeColors[testType] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+                          return (
+                            <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${colorClass}`}>
+                              {testType.replace("_", " ").toUpperCase()}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                         {getTestDescription(test)}...
