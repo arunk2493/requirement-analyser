@@ -3,6 +3,7 @@ import { generateEpicsAgent, generateStoriesAgent, generateQAAgent, generateTest
 import { FaRobot, FaSpinner, FaExternalLinkAlt, FaSync, FaCheckCircle, FaTimesCircle, FaArrowRight, FaJira } from "react-icons/fa";
 import { Toast } from "primereact/toast";
 import { Dropdown } from "primereact/dropdown";
+import { Button } from "primereact/button";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -1255,14 +1256,16 @@ export default function AgenticAIPage() {
               )}
             </div>
             <div className="relative group">
-              <button
+              <Button
                 onClick={handleGenerateEpics}
                 disabled={loadingEpics || !uploadId || generatedEpics.length > 0}
-                className="w-full px-4 py-2 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
-              >
-                {loadingEpics ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}
-                {loadingEpics ? `Generating... ${epicProgress}%` : "Generate Epics"}
-              </button>
+                severity="success"
+                className="w-full"
+                style={{ backgroundColor: '#a855f7', borderColor: '#a855f7' }}
+                icon={loadingEpics ? undefined : "pi pi-arrow-right"}
+                loading={loadingEpics}
+                label={loadingEpics ? `Generating... ${epicProgress}%` : "Generate Epics"}
+              />
               {epicProgress > 0 && loadingEpics && (
                 <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div 
@@ -1443,14 +1446,16 @@ export default function AgenticAIPage() {
               )}
             </div>
             <div className="relative group">
-              <button
+              <Button
                 onClick={handleGenerateTestPlan}
                 disabled={loadingTestPlan || !epicIdForTestPlan || generatedTestPlans.length > 0}
-                className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
-              >
-                {loadingTestPlan ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}
-                {loadingTestPlan ? `Generating... ${testPlanProgress}%` : "Generate Test Plan"}
-              </button>
+                severity="success"
+                className="w-full"
+                style={{ backgroundColor: '#f97316', borderColor: '#f97316' }}
+                icon={loadingTestPlan ? undefined : "pi pi-arrow-right"}
+                loading={loadingTestPlan}
+                label={loadingTestPlan ? `Generating... ${testPlanProgress}%` : "Generate Test Plan"}
+              />
               {testPlanProgress > 0 && loadingTestPlan && (
                 <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div 
@@ -1579,14 +1584,16 @@ export default function AgenticAIPage() {
               )}
             </div>
             <div className="relative group">
-              <button
+              <Button
                 onClick={handleGenerateStories}
                 disabled={loadingStories || !epicIdForStories || generatedStories.length > 0}
-                className="w-full px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
-              >
-                {loadingStories ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}
-                {loadingStories ? `Generating... ${storyProgress}%` : "Generate Stories"}
-              </button>
+                severity="success"
+                className="w-full"
+                style={{ backgroundColor: '#22c55e', borderColor: '#22c55e' }}
+                icon={loadingStories ? undefined : "pi pi-arrow-right"}
+                loading={loadingStories}
+                label={loadingStories ? `Generating... ${storyProgress}%` : "Generate Stories"}
+              />
               {storyProgress > 0 && loadingStories && (
                 <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div 
@@ -1748,14 +1755,16 @@ export default function AgenticAIPage() {
               )}
             </div>
             <div className="relative group">
-              <button
+              <Button
                 onClick={handleGenerateQA}
                 disabled={loadingQA || !storyId}
-                className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
-              >
-                {loadingQA ? <FaSpinner className="animate-spin" /> : <FaArrowRight />}
-                {loadingQA ? `Generating... ${qaProgress}%` : generatedQA.length > 0 ? "Regenerate QA Tests" : "Generate QA Tests"}
-              </button>
+                severity="success"
+                className="w-full"
+                style={{ backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
+                icon={loadingQA ? undefined : "pi pi-arrow-right"}
+                loading={loadingQA}
+                label={loadingQA ? `Generating... ${qaProgress}%` : generatedQA.length > 0 ? "Regenerate QA Tests" : "Generate QA Tests"}
+              />
               {qaProgress > 0 && loadingQA && (
                 <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div 

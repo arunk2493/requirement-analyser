@@ -1,26 +1,28 @@
 import { useEffect, useState } from "react";
 import { fetchAllTestPlans } from "../api/api";
-import { FaFlask, FaSpinner, FaExternalLinkAlt, FaSync, FaChevronLeft, FaChevronRight, FaSortUp, FaSortDown } from "react-icons/fa";
+import { FaFlask, FaSpinner } from "react-icons/fa";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Button } from "primereact/button";
+import { InputText } from "primereact/inputtext";
 
 export default function TestPlansPage() {
   const [testplans, setTestPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [totalTestPlans, setTotalTestPlans] = useState(0);
-  const [sortBy, setSortBy] = useState("created_at");
-  const [sortOrder, setSortOrder] = useState("desc");
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [first, setFirst] = useState(0);
   const pageSize = 10;
 
-  const loadTestPlans = async (page = 1) => {
+  const loadTestPlans = async () => {
     try {
       setRefreshing(true);
-      const response = await fetchAllTestPlans(page, pageSize, sortBy, sortOrder);
+      const page = Math.floor(first / pageSize) + 1;
+      const response = await fetchAllTestPlans(page, pageSize);
       setTestPlans(response.data.test_plans || []);
       setTotalTestPlans(response.data.total_test_plans || 0);
-      setTotalPages(response.data.total_pages || 1);
       setError(null);
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to load test plans");
@@ -34,20 +36,13 @@ export default function TestPlansPage() {
     const initialLoad = async () => {
       try {
         setLoading(true);
-        await loadTestPlans(currentPage);
+        await loadTestPlans();
       } finally {
         setLoading(false);
       }
     };
     initialLoad();
-  }, [currentPage, sortBy, sortOrder]);
-
-  const toggleExpanded = (planId) => {
-    setExpandedRows(prev => ({
-      ...prev,
-      [planId]: !prev[planId]
-    }));
-  };
+  }, [first]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
@@ -60,14 +55,14 @@ export default function TestPlansPage() {
               Test Plans
             </h1>
           </div>
-          <button
+          <Button
+            icon={refreshing ? "pi pi-spin pi-spinner" : "pi pi-refresh"}
             onClick={() => loadTestPlans()}
-            disabled={refreshing}
-            className="p-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white rounded-lg transition"
+            loading={refreshing}
+            className="p-button-rounded p-button-lg"
+            style={{ backgroundColor: '#f97316', borderColor: '#f97316' }}
             title="Refresh test plans"
-          >
-            <FaSync className={`text-2xl ${refreshing ? "animate-spin" : ""}`} />
-          </button>
+          />
         </div>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
           View all test plans for the selected epic with Confluence links
@@ -108,97 +103,82 @@ export default function TestPlansPage() {
       {/* Test Plans Table */}
       {!loading && testplans.length > 0 && (
         <div className="space-y-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Total Test Plans: <span className="font-bold text-gray-900 dark:text-white">{totalTestPlans}</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              Total Test Plans: <span className="font-bold text-gray-900 dark:text-white">{totalTestPlans}</span>
+            </span>
+            <span className="p-input-icon-left">
+              <i className="pi pi-search" />
+              <InputText
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                placeholder="Search test plans..."
+                className="w-full md:w-auto"
+              />
+            </span>
           </div>
-          <div className="overflow-x-auto rounded-lg shadow">
-            <table className="w-full border-collapse bg-white dark:bg-gray-800">
-              <thead>
-                <tr className="bg-orange-100 dark:bg-orange-900 border-b border-gray-300 dark:border-gray-700">
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                    <button className="flex items-center gap-2" onClick={() => {
-                      if (sortBy === 'id') {
-                        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-                      } else {
-                        setSortBy('id');
-                        setSortOrder('desc');
-                      }
-                      setCurrentPage(1);
-                    }}>
-                      ID
-                      {sortBy === 'id' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Title</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                    <button className="flex items-center gap-2" onClick={() => {
-                      if (sortBy === 'created_at') {
-                        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-                      } else {
-                        setSortBy('created_at');
-                        setSortOrder('desc');
-                      }
-                      setCurrentPage(1);
-                    }}>
-                      Created
-                      {sortBy === 'created_at' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Confluence</th>
-                </tr>
-              </thead>
-              <tbody>
-                {testplans.map((plan) => (
-                    <tr key={plan.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-orange-50 dark:hover:bg-gray-700 transition">
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-medium">{plan.id}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">{plan.title || (plan.content?.title ?? (typeof plan.content === 'string' ? plan.content.substring(0,50) : JSON.stringify(plan.content).substring(0,50)))}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                        {new Date(plan.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        {plan.confluence_page_url ? (
-                          <a
-                            href={plan.confluence_page_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-md transition"
-                          >
-                            <FaExternalLinkAlt className="text-xs" />
-                            <span>View</span>
-                          </a>
-                        ) : (
-                          <span className="text-gray-400 dark:text-gray-500">N/A</span>
-                        )}
-                      </td>
-                    </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                title="Previous page"
-              >
-                <FaChevronLeft className="text-sm text-gray-700 dark:text-gray-300" />
-              </button>
 
-              <span className="text-xs text-gray-600 dark:text-gray-400">Page {currentPage} of {totalPages}</span>
-
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                title="Next page"
-              >
-                <FaChevronRight className="text-sm text-gray-700 dark:text-gray-300" />
-              </button>
-            </div>
-          )}
+          <DataTable
+            value={testplans}
+            paginator
+            first={first}
+            onPage={(e) => setFirst(e.first)}
+            rows={pageSize}
+            totalRecords={totalTestPlans}
+            rowsPerPageOptions={[5, 10, 20, 50]}
+            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
+            globalFilter={globalFilter}
+            emptyMessage="No test plans found"
+            className="p-datatable-striped p-datatable-sm"
+            responsiveLayout="scroll"
+            stripedRows
+            loading={refreshing}
+            dataKey="id"
+            scrollable
+            scrollHeight="600px"
+            style={{ borderRadius: '0.5rem' }}
+          >
+            <Column
+              field="id"
+              header="ID"
+              sortable
+              style={{ width: '80px' }}
+              bodyClassName="text-gray-900 dark:text-gray-100 font-medium"
+            />
+            <Column
+              field="title"
+              header="Title"
+              style={{ width: '300px' }}
+              body={(rowData) => rowData.title || (rowData.content?.title ?? (typeof rowData.content === 'string' ? rowData.content.substring(0, 50) : JSON.stringify(rowData.content).substring(0, 50)))}
+              bodyClassName="text-gray-900 dark:text-gray-100"
+            />
+            <Column
+              field="created_at"
+              header="Created"
+              sortable
+              style={{ width: '150px' }}
+              body={(rowData) => new Date(rowData.created_at).toLocaleDateString()}
+              bodyClassName="text-gray-600 dark:text-gray-400"
+            />
+            <Column
+              header="Confluence"
+              style={{ width: '150px' }}
+              body={(rowData) => (
+                rowData.confluence_page_url ? (
+                  <Button
+                    onClick={() => window.open(rowData.confluence_page_url, '_blank')}
+                    label="View"
+                    icon="pi pi-external-link"
+                    className="p-button-sm p-button-rounded"
+                    style={{ backgroundColor: '#f97316', borderColor: '#f97316' }}
+                    title="View on Confluence"
+                  />
+                ) : (
+                  <span className="text-gray-400 text-sm">N/A</span>
+                )
+              )}
+            />
+          </DataTable>
         </div>
       )}
     </div>

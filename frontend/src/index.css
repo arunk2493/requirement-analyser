@@ -425,3 +425,285 @@ body {
   color: #9ca3af;
 }
 
+/* ========================================
+   PrimeReact Button Styling
+   ======================================== */
+
+/* Button base styling */
+.p-button {
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  padding: 0.75rem 1.5rem;
+}
+
+/* Button hover state */
+.p-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dark .p-button:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Button focus state */
+.p-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Button disabled state */
+.p-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #9ca3af !important;
+  border-color: #9ca3af !important;
+}
+
+/* Button loading spinner */
+.p-button .p-button-loading-icon {
+  margin-right: 0.5rem;
+}
+
+/* Button label */
+.p-button .p-button-label {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+/* Button icon */
+.p-button .p-button-icon {
+  margin-right: 0.5rem;
+}
+
+/* ========================================
+   PrimeReact DataTable Styling
+   ======================================== */
+
+/* DataTable Container */
+.p-datatable {
+  border-radius: 0.5rem;
+  border: 2px solid #374151;
+  overflow: hidden;
+}
+
+.dark .p-datatable {
+  border-color: #1f2937;
+}
+
+/* DataTable Header */
+.p-datatable .p-datatable-thead > tr > th {
+  background-color: #f3f4f6;
+  border-bottom: 2px solid #d1d5db;
+  padding: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.dark .p-datatable .p-datatable-thead > tr > th {
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #f3f4f6;
+}
+
+/* DataTable Body */
+.p-datatable .p-datatable-tbody > tr {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dark .p-datatable .p-datatable-tbody > tr {
+  border-color: #374151;
+}
+
+.p-datatable .p-datatable-tbody > tr:hover {
+  background-color: #f9fafb;
+}
+
+.dark .p-datatable .p-datatable-tbody > tr:hover {
+  background-color: #2d3748;
+}
+
+/* Striped rows */
+.p-datatable-striped .p-datatable-tbody > tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.p-datatable-striped .p-datatable-tbody > tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.dark .p-datatable-striped .p-datatable-tbody > tr:nth-child(odd) {
+  background-color: #111827;
+}
+
+.dark .p-datatable-striped .p-datatable-tbody > tr:nth-child(even) {
+  background-color: #1f2937;
+}
+
+/* DataTable Cells */
+.p-datatable .p-datatable-tbody > tr > td {
+  padding: 1rem;
+  border-color: #e5e7eb;
+}
+
+.dark .p-datatable .p-datatable-tbody > tr > td {
+  border-color: #374151;
+}
+
+/* DataTable Paginator */
+.p-paginator {
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.dark .p-paginator {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+.p-paginator .p-paginator-current {
+  color: #6b7280;
+}
+
+.dark .p-paginator .p-paginator-current {
+  color: #9ca3af;
+}
+
+/* Paginator Buttons */
+.p-paginator .p-paginator-first,
+.p-paginator .p-paginator-prev,
+.p-paginator .p-paginator-next,
+.p-paginator .p-paginator-last {
+  color: #6b7280;
+  border-color: #d1d5db;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.dark .p-paginator .p-paginator-first,
+.dark .p-paginator .p-paginator-prev,
+.dark .p-paginator .p-paginator-next,
+.dark .p-paginator .p-paginator-last {
+  color: #e5e7eb;
+  border-color: #4b5563;
+  background-color: #374151;
+}
+
+.p-paginator .p-paginator-first:hover,
+.p-paginator .p-paginator-prev:hover,
+.p-paginator .p-paginator-next:hover,
+.p-paginator .p-paginator-last:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.dark .p-paginator .p-paginator-first:hover,
+.dark .p-paginator .p-paginator-prev:hover,
+.dark .p-paginator .p-paginator-next:hover,
+.dark .p-paginator .p-paginator-last:hover {
+  background-color: #4b5563;
+  border-color: #9ca3af;
+}
+
+/* Paginator Page Links */
+.p-paginator .p-paginator-pages .p-paginator-page {
+  border-color: #d1d5db;
+  background-color: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease;
+}
+
+.dark .p-paginator .p-paginator-pages .p-paginator-page {
+  border-color: #4b5563;
+  background-color: #374151;
+  color: #e5e7eb;
+}
+
+.p-paginator .p-paginator-pages .p-paginator-page:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.dark .p-paginator .p-paginator-pages .p-paginator-page:hover {
+  background-color: #4b5563;
+  border-color: #6b7280;
+}
+
+.p-paginator .p-paginator-pages .p-paginator-page.p-highlight {
+  background-color: #a855f7;
+  border-color: #a855f7;
+  color: #ffffff;
+}
+
+/* Rows Per Page Dropdown */
+.p-paginator .p-paginator-rpp-options {
+  color: #6b7280;
+}
+
+.dark .p-paginator .p-paginator-rpp-options {
+  color: #9ca3af;
+}
+
+/* Search Input */
+.p-input-icon-left > .p-inputtext {
+  padding-left: 2.5rem;
+}
+
+.p-input-icon-left > i {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.p-inputtext {
+  border: 2px solid #374151;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: #ffffff;
+  color: #111827;
+  transition: all 0.2s ease;
+}
+
+.dark .p-inputtext {
+  border-color: #1f2937;
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+.p-inputtext:focus {
+  outline: none;
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+.dark .p-inputtext:focus {
+  border-color: #a855f7;
+}
+
+/* DataTable Loading State */
+.p-datatable.p-datatable-loading .p-datatable-tbody > tr {
+  opacity: 0.6;
+}
+
+/* Compact button sizing for DataTable links */
+.p-datatable .p-button-sm {
+  padding: 0.375rem 0.75rem !important;
+  font-size: 0.875rem !important;
+}
+
+.p-datatable .p-button-sm .p-button-icon {
+  font-size: 0.75rem !important;
+  margin-right: 0.25rem !important;
+}
+
+.p-datatable .p-button-sm .p-button-label {
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+}
+
