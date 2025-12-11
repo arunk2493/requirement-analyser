@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { fetchAllTestPlans } from "../api/api";
-import { FaFlask, FaSpinner } from "react-icons/fa";
+import { FaFileAlt, FaSpinner } from "react-icons/fa";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
+import { Paginator } from "primereact/paginator";
+import { Dropdown } from "primereact/dropdown";
 
 export default function TestPlansPage() {
   const [testplans, setTestPlans] = useState([]);
@@ -14,7 +16,7 @@ export default function TestPlansPage() {
   const [totalTestPlans, setTotalTestPlans] = useState(0);
   const [globalFilter, setGlobalFilter] = useState("");
   const [first, setFirst] = useState(0);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   const loadTestPlans = async () => {
     try {
@@ -42,7 +44,7 @@ export default function TestPlansPage() {
       }
     };
     initialLoad();
-  }, [first]);
+  }, [first, pageSize]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
@@ -50,7 +52,7 @@ export default function TestPlansPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <FaFlask className="text-4xl text-orange-600" />
+            <FaFileAlt className="text-4xl text-orange-600" />
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
               Test Plans
             </h1>
@@ -122,13 +124,6 @@ export default function TestPlansPage() {
 
           <DataTable
             value={testplans}
-            paginator
-            first={first}
-            onPage={(e) => setFirst(e.first)}
-            rows={pageSize}
-            totalRecords={totalTestPlans}
-            rowsPerPageOptions={[5, 10, 20, 50]}
-            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
             globalFilter={globalFilter}
             emptyMessage="No test plans found"
             className="p-datatable-striped p-datatable-sm"
@@ -181,6 +176,30 @@ export default function TestPlansPage() {
               )}
             />
           </DataTable>
+
+          {totalTestPlans > pageSize && (
+            <div className="mt-6 flex items-center justify-center gap-4">
+              <Paginator
+                first={first}
+                rows={pageSize}
+                totalRecords={totalTestPlans}
+                onPageChange={(e) => {
+                  setFirst(e.first);
+                }}
+                template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
+              />
+              <Dropdown
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(e.value);
+                  setFirst(0);
+                }}
+                options={[5, 10, 20, 50]}
+                className="p-dropdown-compact"
+                style={{ width: '70px' }}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,18 +1,22 @@
 import { useEffect, useState } from "react";
 import { fetchAllQA } from "../api/api";
-import { FaCheckSquare, FaSpinner, FaSync, FaChevronLeft, FaChevronRight, FaSortUp, FaSortDown, FaCode, FaCopy, FaTimes, FaFilter, FaDownload } from "react-icons/fa";
+import { FaCheckSquare, FaSpinner, FaCode, FaCopy, FaTimes, FaDownload } from "react-icons/fa";
 import { Button } from "primereact/button";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { InputText } from "primereact/inputtext";
+import { Paginator } from "primereact/paginator";
+import { Dropdown } from "primereact/dropdown";
+import { Checkbox } from "primereact/checkbox";
 
 export default function QAPage() {
   const [qa, setQA] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [first, setFirst] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [totalQATests, setTotalQATests] = useState(0);
-  const [sortBy, setSortBy] = useState("created_at");
-  const [sortOrder, setSortOrder] = useState("desc");
   const [expandedScripts, setExpandedScripts] = useState({});
   const [scriptLanguage, setScriptLanguage] = useState({});
   const [copyNotification, setCopyNotification] = useState(null);
@@ -21,9 +25,9 @@ export default function QAPage() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [allQA, setAllQA] = useState([]);
   const [originalTotalCount, setOriginalTotalCount] = useState(0);
-  const pageSize = 10;
+  const [globalFilter, setGlobalFilter] = useState("");
 
-  const loadQA = async (page = 1) => {
+  const loadQA = async () => {
     try {
       setRefreshing(true);
       
@@ -33,7 +37,7 @@ export default function QAPage() {
       let hasMoreData = true;
       
       while (hasMoreData) {
-        const response = await fetchAllQA(currentFetchPage, 100, sortBy, sortOrder);
+        const response = await fetchAllQA(currentFetchPage, 100);
         const pageTests = response.data.qa_tests || [];
         allTests = [...allTests, ...pageTests];
         
@@ -70,16 +74,15 @@ export default function QAPage() {
 
       // Calculate total filtered items
       const filteredTotal = filteredTests.length;
-      const filteredTotalPages = Math.ceil(filteredTotal / pageSize);
       
-      // Get paginated results based on current page
+      // Get paginated results based on first offset
+      const page = Math.floor(first / pageSize) + 1;
       const startIdx = (page - 1) * pageSize;
       const endIdx = startIdx + pageSize;
       const paginatedTests = filteredTests.slice(startIdx, endIdx);
 
       setQA(paginatedTests);
       setTotalQATests(filteredTotal);
-      setTotalPages(filteredTotalPages);
       setError(null);
     } catch (err) {
       let errorMessage = "Failed to load QA test cases";
@@ -103,13 +106,13 @@ export default function QAPage() {
     const initialLoad = async () => {
       try {
         setLoading(true);
-        await loadQA(currentPage);
+        await loadQA();
       } finally {
         setLoading(false);
       }
     };
     initialLoad();
-  }, [currentPage, sortBy, sortOrder, selectedStories, selectedTestTypes]);
+  }, [first, pageSize, selectedStories, selectedTestTypes]);
 
   const generateKarateScript = (test) => {
     const testTitle = test.content?.title || `Test ${test.id}`;
@@ -178,6 +181,52 @@ public class ${className}Test {
       ...prev,
       [qaId]: language
     }));
+  };
+
+  const testTypeBodyTemplate = (rowData) => {
+    const testType = rowData.test_type || rowData.content?.type || "functional";
+    const typeColors = {
+      "functional": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      "non_functional": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+      "api": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    };
+    const colorClass = typeColors[testType] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+    return (
+      <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${colorClass}`}>
+        {testType.replace("_", " ").toUpperCase()}
+      </span>
+    );
+  };
+
+  const descriptionBodyTemplate = (rowData) => {
+    return getTestDescription(rowData) + "...";
+  };
+
+  const createdAtBodyTemplate = (rowData) => {
+    return new Date(rowData.created_at).toLocaleDateString();
+  };
+
+  const automationScriptsBodyTemplate = (rowData) => {
+    return (
+      <div className="flex items-center justify-center gap-2">
+        <button
+          onClick={() => toggleScript(rowData.id, 'karate')}
+          className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded transition flex items-center gap-1"
+          title="Generate Karate Script"
+        >
+          <FaCode className="text-xs" />
+          Karate
+        </button>
+        <button
+          onClick={() => toggleScript(rowData.id, 'java')}
+          className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded transition flex items-center gap-1"
+          title="Generate Java Script"
+        >
+          <FaCode className="text-xs" />
+          Java
+        </button>
+      </div>
+    );
   };
 
   const getTestTitle = (qa) => {
@@ -320,8 +369,8 @@ public class ${className}Test {
       {/* QA Table */}
       {!loading && qa.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               {selectedStories.length > 0 || selectedTestTypes.length > 0 ? (
                 <>
                   Filtered QA Tests: <span className="font-bold text-gray-900 dark:text-white">{totalQATests}</span>
@@ -333,15 +382,25 @@ public class ${className}Test {
                   Total QA Tests: <span className="font-bold text-gray-900 dark:text-white">{totalQATests}</span>
                 </>
               )}
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="p-input-icon-left">
+                <i className="pi pi-search" />
+                <InputText
+                  value={globalFilter}
+                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  placeholder="Search test cases..."
+                  className="w-full md:w-auto"
+                />
+              </span>
+              <Button
+                icon="pi pi-filter"
+                label={showFilterPanel ? "Hide Filters" : "Show Filters"}
+                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                className="p-button-outlined"
+                style={{ borderColor: '#3b82f6', color: '#3b82f6' }}
+              />
             </div>
-            <button
-              onClick={() => setShowFilterPanel(!showFilterPanel)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
-              title="Toggle filters"
-            >
-              <FaFilter />
-              Filters
-            </button>
           </div>
 
           {/* Filter Panel */}
@@ -350,7 +409,7 @@ public class ${className}Test {
               
               {/* Filter by Story */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Filter by Story (Jira ID)
                 </label>
                 <div className="space-y-2 p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-600 max-h-48 overflow-y-auto">
@@ -361,19 +420,17 @@ public class ${className}Test {
                     const storyTestCount = allQA.filter(test => test.story_id === storyId).length;
                     
                     return (
-                      <label key={storyId} className="flex items-center gap-3 p-2 hover:bg-blue-50 dark:hover:bg-gray-800 rounded cursor-pointer transition">
-                        <input
-                          type="checkbox"
+                      <div key={storyId} className="flex items-center gap-3 p-2 hover:bg-blue-50 dark:hover:bg-gray-800 rounded transition">
+                        <Checkbox
                           checked={selectedStories.includes(storyId)}
                           onChange={(e) => {
-                            if (e.target.checked) {
+                            if (e.checked) {
                               setSelectedStories([...selectedStories, storyId]);
                             } else {
                               setSelectedStories(selectedStories.filter(id => id !== storyId));
                             }
-                            setCurrentPage(1);
+                            setFirst(0);
                           }}
-                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 cursor-pointer accent-blue-600"
                         />
                         <div className="flex-1">
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -386,26 +443,26 @@ public class ${className}Test {
                         <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">
                           {storyTestCount}
                         </span>
-                      </label>
+                      </div>
                     );
                   })}
                 </div>
                 {selectedStories.length > 0 && (
-                  <button
+                  <Button
+                    label={`Clear story filter (${selectedStories.length} selected)`}
                     onClick={() => {
                       setSelectedStories([]);
-                      setCurrentPage(1);
+                      setFirst(0);
                     }}
-                    className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    Clear story filter ({selectedStories.length} selected)
-                  </button>
+                    className="p-button-text p-button-sm mt-2"
+                    style={{ color: '#3b82f6' }}
+                  />
                 )}
               </div>
 
               {/* Filter by Test Type */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Filter by Test Type
                 </label>
                 <div className="space-y-2 p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-600">
@@ -427,19 +484,17 @@ public class ${className}Test {
                     const colorClass = typeColors[testType] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
                     
                     return (
-                      <label key={testType} className="flex items-center gap-3 p-2 hover:bg-blue-50 dark:hover:bg-gray-800 rounded cursor-pointer transition">
-                        <input
-                          type="checkbox"
+                      <div key={testType} className="flex items-center gap-3 p-2 hover:bg-blue-50 dark:hover:bg-gray-800 rounded transition">
+                        <Checkbox
                           checked={selectedTestTypes.includes(testType)}
                           onChange={(e) => {
-                            if (e.target.checked) {
+                            if (e.checked) {
                               setSelectedTestTypes([...selectedTestTypes, testType]);
                             } else {
                               setSelectedTestTypes(selectedTestTypes.filter(type => type !== testType));
                             }
-                            setCurrentPage(1);
+                            setFirst(0);
                           }}
-                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 cursor-pointer accent-blue-600"
                         />
                         <span className={`text-xs font-semibold px-2 py-1 rounded ${colorClass}`}>
                           {testType.replace("_", " ").toUpperCase()}
@@ -447,20 +502,20 @@ public class ${className}Test {
                         <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded ml-auto">
                           {testTypeCount}
                         </span>
-                      </label>
+                      </div>
                     );
                   })}
                 </div>
                 {selectedTestTypes.length > 0 && (
-                  <button
+                  <Button
+                    label="Clear type filter"
                     onClick={() => {
                       setSelectedTestTypes([]);
-                      setCurrentPage(1);
+                      setFirst(0);
                     }}
-                    className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    Clear type filter
-                  </button>
+                    className="p-button-text p-button-sm mt-2"
+                    style={{ color: '#3b82f6' }}
+                  />
                 )}
               </div>
 
@@ -508,96 +563,58 @@ public class ${className}Test {
           )}
 
           <div className="overflow-x-auto rounded-lg shadow">
-            <table className="w-full border-collapse bg-white dark:bg-gray-800">
-              <thead>
-                <tr className="bg-blue-100 dark:bg-blue-900 border-b border-gray-300 dark:border-gray-700">
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                    <button className="flex items-center gap-2" onClick={() => {
-                      if (sortBy === 'id') {
-                        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-                      } else {
-                        setSortBy('id');
-                        setSortOrder('desc');
-                      }
-                      setCurrentPage(1);
-                    }}>
-                      ID
-                      {sortBy === 'id' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Test Case Title</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Test Type</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Description</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                    <button className="flex items-center gap-2" onClick={() => {
-                      if (sortBy === 'created_at') {
-                        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-                      } else {
-                        setSortBy('created_at');
-                        setSortOrder('desc');
-                      }
-                      setCurrentPage(1);
-                    }}>
-                      Created
-                      {sortBy === 'created_at' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">Automation Scripts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {qa.map((test) => (
-                    <tr key={test.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition">
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-medium">{test.id}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-semibold">
-                        {getTestTitle(test)}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        {(() => {
-                          const testType = test.test_type || test.content?.type || "functional";
-                          const typeColors = {
-                            "functional": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-                            "non_functional": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-                            "api": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-                          };
-                          const colorClass = typeColors[testType] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
-                          return (
-                            <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${colorClass}`}>
-                              {testType.replace("_", " ").toUpperCase()}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                        {getTestDescription(test)}...
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                        {new Date(test.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => toggleScript(test.id, 'karate')}
-                            className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded transition flex items-center gap-1"
-                            title="Generate Karate Script"
-                          >
-                            <FaCode className="text-xs" />
-                            Karate
-                          </button>
-                          <button
-                            onClick={() => toggleScript(test.id, 'java')}
-                            className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded transition flex items-center gap-1"
-                            title="Generate Java Script"
-                          >
-                            <FaCode className="text-xs" />
-                            Java
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable
+              value={qa}
+              globalFilter={globalFilter}
+              emptyMessage="No QA test cases found"
+              className="p-datatable-striped p-datatable-sm"
+              responsiveLayout="scroll"
+              stripedRows
+              loading={refreshing}
+              dataKey="id"
+              scrollable
+              scrollHeight="600px"
+              style={{ borderRadius: '0.5rem' }}
+            >
+              <Column
+                field="id"
+                header="ID"
+                sortable
+                style={{ width: '80px' }}
+                bodyClassName="text-gray-900 dark:text-gray-100 font-medium"
+              />
+              <Column
+                field="title"
+                header="Test Case Title"
+                style={{ width: '300px' }}
+                body={(rowData) => getTestTitle(rowData)}
+                bodyClassName="text-gray-900 dark:text-gray-100"
+              />
+              <Column
+                header="Test Type"
+                style={{ width: '150px' }}
+                body={testTypeBodyTemplate}
+              />
+              <Column
+                header="Description"
+                style={{ width: '250px' }}
+                body={descriptionBodyTemplate}
+                bodyClassName="text-gray-600 dark:text-gray-400 line-clamp-2"
+              />
+              <Column
+                field="created_at"
+                header="Created"
+                sortable
+                style={{ width: '150px' }}
+                body={createdAtBodyTemplate}
+                bodyClassName="text-gray-600 dark:text-gray-400"
+              />
+              <Column
+                header="Automation Scripts"
+                style={{ width: '200px' }}
+                body={automationScriptsBodyTemplate}
+              />
+            </DataTable>
           </div>
 
           {/* Automation Script Modal */}
@@ -651,27 +668,27 @@ public class ${className}Test {
           })}
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                title="Previous page"
-              >
-                <FaChevronLeft className="text-sm text-gray-700 dark:text-gray-300" />
-              </button>
-
-              <span className="text-xs text-gray-600 dark:text-gray-400">Page {currentPage} of {totalPages}</span>
-
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                title="Next page"
-              >
-                <FaChevronRight className="text-sm text-gray-700 dark:text-gray-300" />
-              </button>
+          {totalQATests > 0 && (
+            <div className="mt-6 flex items-center justify-center gap-4">
+              <Paginator
+                first={first}
+                rows={pageSize}
+                totalRecords={totalQATests}
+                onPageChange={(e) => {
+                  setFirst(e.first);
+                }}
+                template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
+              />
+              <Dropdown
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(e.value);
+                  setFirst(0);
+                }}
+                options={[5, 10, 20, 50]}
+                className="p-dropdown-compact"
+                style={{ width: '70px' }}
+              />
             </div>
           )}
         </div>

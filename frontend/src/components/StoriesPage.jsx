@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { fetchAllStories } from "../api/api";
-import { FaList, FaSpinner } from "react-icons/fa";
+import { FaBook, FaSpinner } from "react-icons/fa";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
+import { Paginator } from "primereact/paginator";
+import { Dropdown } from "primereact/dropdown";
 
 export default function StoriesPage() {
   const [stories, setStories] = useState([]);
@@ -14,7 +16,7 @@ export default function StoriesPage() {
   const [totalStories, setTotalStories] = useState(0);
   const [globalFilter, setGlobalFilter] = useState("");
   const [first, setFirst] = useState(0);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   const loadStories = async () => {
     try {
@@ -42,7 +44,7 @@ export default function StoriesPage() {
       }
     };
     initialLoad();
-  }, [first]);
+  }, [first, pageSize]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
@@ -50,7 +52,7 @@ export default function StoriesPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <FaList className="text-4xl text-green-600" />
+            <FaBook className="text-4xl text-green-600" />
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
               Stories
             </h1>
@@ -122,13 +124,6 @@ export default function StoriesPage() {
 
           <DataTable
             value={stories}
-            paginator
-            first={first}
-            onPage={(e) => setFirst(e.first)}
-            rows={pageSize}
-            totalRecords={totalStories}
-            rowsPerPageOptions={[5, 10, 20, 50]}
-            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
             globalFilter={globalFilter}
             emptyMessage="No stories found"
             className="p-datatable-striped p-datatable-sm"
@@ -180,6 +175,30 @@ export default function StoriesPage() {
               )}
             />
           </DataTable>
+
+          {totalStories > pageSize && (
+            <div className="mt-6 flex items-center justify-center gap-4">
+              <Paginator
+                first={first}
+                rows={pageSize}
+                totalRecords={totalStories}
+                onPageChange={(e) => {
+                  setFirst(e.first);
+                }}
+                template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
+              />
+              <Dropdown
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(e.value);
+                  setFirst(0);
+                }}
+                options={[5, 10, 20, 50]}
+                className="p-dropdown-compact"
+                style={{ width: '70px' }}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
