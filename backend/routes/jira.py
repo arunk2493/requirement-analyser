@@ -31,6 +31,7 @@ class CreateEpicRequest(BaseModel):
     jira_project_key: str
     epic_name: str
     epic_description: str
+    technical_implementation: Optional[str] = None
     epic_id: Optional[int] = None
 
 
@@ -119,6 +120,18 @@ async def test_jira_connection(
         )
 
 
+def format_epic_description(description: str, technical_implementation: Optional[str] = None) -> str:
+    """Format epic description with description and technical implementation"""
+    # Combine description and technical implementation if both exist
+    if technical_implementation and isinstance(technical_implementation, str) and technical_implementation.strip():
+        return f"""{description}
+
+Technical Implementation:
+{technical_implementation}"""
+    
+    return description
+
+
 @router.post("/create-epic", response_model=JiraIssueResponse)
 async def create_epic_in_jira(
     request: CreateEpicRequest,
@@ -143,9 +156,15 @@ async def create_epic_in_jira(
         issue_dict = {
             "project": request.jira_project_key,
             "summary": request.epic_name,
-            "description": request.epic_description,
+            "description": format_epic_description(
+                request.epic_description,
+                request.technical_implementation
+            ),
             "issuetype": {"name": "Epic"},
         }
+        
+        # Log for debugging
+        logger.info(f"Epic creation - Name: {request.epic_name}, Description length: {len(request.epic_description)}, TechImpl: {request.technical_implementation is not None}")
 
         try:
             issue = jira.create_issue(**issue_dict)
@@ -496,4 +515,43 @@ async def delete_jira_credentials(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error deleting credentials: {str(e)}",
+        )
+
+
+class MarkEpicFailedRequest(BaseModel):
+    epic_id: int
+
+
+@router.post("/mark-epic-failed")
+async def mark_epic_failed(
+    request: MarkEpicFailedRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Mark an epic as failed in Jira creation (for audit trail)"""
+    try:
+        epic = db.query(Epic).filter(Epic.id == request.epic_id).first()
+        if not epic:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Epic not found",
+            )
+        
+        # Mark as failed
+        epic.jira_creation_success = False
+        db.commit()
+        
+        logger.info(f"Marked epic {request.epic_id} as failed in Jira creation")
+        return {
+            "status": "success",
+            "message": "Epic marked as failed",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error marking epic as failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error marking epic as failed: {str(e)}",
         )

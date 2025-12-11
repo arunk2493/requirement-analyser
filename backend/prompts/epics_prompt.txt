@@ -14,26 +14,15 @@ Respond ONLY with a valid JSON array. NO explanations, NO comments, NO text outs
 
 Each epic object MUST have:
 - name (string): Clear, concise epic title (2-5 words)
-- problemStatement (string): The problem this epic solves, user pain point, or business requirement
+- description (string): Comprehensive description of the epic's purpose, scope, and what it accomplishes
 - technicalImplementation (string): Detailed technical approach, architecture, technologies, and implementation strategy
-- functionality (string): Detailed description of what this epic does, features included, and user interactions
-- acceptanceCriteria (array of strings): 4-6 clear, measurable, testable acceptance criteria
 
 ## Example Format:
 [
   {
     "name": "User Authentication",
-    "problemStatement": "Users need secure access to their accounts with protection against unauthorized access and account hijacking",
-    "technicalImplementation": "Implement JWT-based authentication with bcrypt password hashing, secure session management using Redis, 2FA via TOTP, and OAuth2 integration for social login. Use HTTPS for all auth endpoints and implement rate limiting to prevent brute force attacks.",
-    "functionality": "Users can register with email, create strong passwords, login with credentials, enable two-factor authentication, reset forgotten passwords via email verification, logout from all devices, and maintain persistent sessions across browser restarts. Supports single sign-on with Google and GitHub.",
-    "acceptanceCriteria": [
-      "Users can register with email and password, password meets complexity requirements",
-      "Users can login with valid credentials and receive JWT token valid for 24 hours",
-      "Users can reset forgotten passwords via secure email link",
-      "Passwords are securely hashed with bcrypt (min 12 rounds) and never stored in plaintext",
-      "Two-factor authentication can be enabled/disabled via TOTP app",
-      "Session tokens are validated and user context is available on each authenticated request"
-    ]
+    "description": "Implement a secure user authentication system that allows users to register, login, reset passwords, and maintain secure sessions. Users can enable two-factor authentication via authenticator apps and single sign-on with social providers (Google, GitHub).",
+    "technicalImplementation": "Implement JWT-based authentication with bcrypt password hashing (min 12 rounds), secure session management using Redis, 2FA via TOTP, and OAuth2 integration for social login. Use HTTPS for all auth endpoints, implement rate limiting to prevent brute force attacks, and store passwords securely with never storing plaintext passwords."
   }
 ]
 

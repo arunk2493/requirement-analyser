@@ -177,7 +177,27 @@ export default function AgenticAIPage() {
       if (jiraCredentials) {
         await createEpicsInJira(epics, uploadId);
       } else {
-        showMessage("info", "ℹ️ Jira credentials not configured. Set up Jira integration to automatically create epics.");
+        // Mark all epics as failed if Jira credentials are not configured
+        showMessage("warning", "⚠️ Jira credentials not configured. Epics marked as failed. Set up Jira integration to create epics.");
+        // Mark all epics with failed status in the UI
+        const token = localStorage.getItem("token");
+        for (const epic of epics) {
+          try {
+            // Update backend to mark epic as failed
+            await fetch(`${API_BASE_URL}/api/jira/mark-epic-failed`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                epic_id: epic.id,
+              }),
+            });
+          } catch (err) {
+            console.error(`Failed to mark epic ${epic.id} as failed:`, err);
+          }
+        }
       }
       
       // Refresh the epics list
@@ -200,6 +220,9 @@ export default function AgenticAIPage() {
       try {
         setLoadingJiraItems(prev => new Set([...prev, `epic_${epic.id}`]));
         
+        const technicalImpl = epic.technicalImplementation || epic.content?.technicalImplementation || null;
+        console.log(`Creating epic ${epic.name}:`, { technicalImplementation: technicalImpl, epicContent: epic.content });
+        
         const response = await fetch(`${API_BASE_URL}/api/jira/create-epic`, {
           method: "POST",
           headers: {
@@ -214,6 +237,7 @@ export default function AgenticAIPage() {
             epic_name: epic.name || "Untitled Epic",
             epic_description: epic.description || epic.content?.description || "",
             epic_id: epic.id,
+            technical_implementation: epic.technicalImplementation || epic.content?.technicalImplementation || null,
           }),
         });
 
@@ -227,6 +251,7 @@ export default function AgenticAIPage() {
           }));
         } else {
           failureCount++;
+          console.error(`Failed to create epic ${epic.name}:`, data);
         }
       } catch (err) {
         failureCount++;
@@ -250,6 +275,101 @@ export default function AgenticAIPage() {
 
     // Refresh epics to get persisted Jira data
     await fetchEpics(uploadId, false);
+  };
+
+  // Retry creating a single epic in Jira
+  const retryCreateEpicInJira = async (epic) => {
+    console.log("Retry button clicked for epic:", epic.id, epic.name);
+    
+    // Check for Jira credentials
+    const savedJiraCredentials = localStorage.getItem("jira_credentials");
+    if (!savedJiraCredentials) {
+      console.error("No Jira credentials found");
+      const errorMsg = "❌ Jira credentials not configured. Please configure Jira integration first.";
+      showMessage("error", errorMsg);
+      return;
+    }
+
+    let credentials;
+    try {
+      credentials = JSON.parse(savedJiraCredentials);
+      console.log("Parsed Jira credentials");
+    } catch (e) {
+      console.error("Failed to parse credentials:", e);
+      const errorMsg = "❌ Invalid Jira credentials. Please reconfigure Jira integration.";
+      showMessage("error", errorMsg);
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      const errorMsg = "❌ Not authenticated. Please login first.";
+      showMessage("error", errorMsg);
+      return;
+    }
+
+    try {
+      console.log("Setting loading state for epic:", epic.id);
+      setLoadingJiraItems(prev => new Set([...prev, `epic_${epic.id}`]));
+      
+      const technicalImpl = epic.technicalImplementation || epic.content?.technicalImplementation || null;
+      console.log(`Retrying epic creation for ${epic.name}:`, { technicalImplementation: technicalImpl, epicContent: epic.content });
+      
+      console.log("Making API call to create-epic");
+      const response = await fetch(`${API_BASE_URL}/api/jira/create-epic`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jira_url: credentials.jira_url,
+          jira_username: credentials.jira_username,
+          jira_api_token: credentials.jira_api_token,
+          jira_project_key: credentials.jira_project_key,
+          epic_name: epic.name || "Untitled Epic",
+          epic_description: epic.description || epic.content?.description || "",
+          epic_id: epic.id,
+          technical_implementation: epic.technicalImplementation || epic.content?.technicalImplementation || null,
+        }),
+      });
+
+      const data = await response.json();
+      console.log("API Response:", response.status, data);
+
+      if (response.ok) {
+        console.log("Epic created successfully");
+        setJiraResults(prev => ({
+          ...prev,
+          [`epic_${epic.id}`]: { key: data.key, url: data.url }
+        }));
+        const successMsg = `✅ Epic "${epic.name}" created in Jira successfully!`;
+        showMessage("success", successMsg);
+        console.log(successMsg);
+        
+        // Refresh epics to get persisted Jira data
+        const uploadId = Number.parseInt(localStorage.getItem("lastSelectedUploadId")) || generatedEpics[0]?.upload_id;
+        if (uploadId) {
+          console.log("Refreshing epics for upload:", uploadId);
+          await fetchEpics(uploadId, false);
+        }
+      } else {
+        console.error(`Failed to create epic ${epic.name}:`, data);
+        const errorMsg = `❌ Failed to create epic: ${data.detail || data.errors?.description || "Unknown error"}`;
+        showMessage("error", errorMsg);
+      }
+    } catch (err) {
+      console.error(`Failed to retry epic creation for ${epic.name}:`, err);
+      const errorMsg = `❌ Error: ${err.message || "Failed to create epic. Please try again."}`;
+      showMessage("error", errorMsg);
+    } finally {
+      console.log("Clearing loading state for epic:", epic.id);
+      setLoadingJiraItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`epic_${epic.id}`);
+        return newSet;
+      });
+    }
   };
 
   // Create all stories in Jira as subtasks under epic
@@ -971,11 +1091,25 @@ export default function AgenticAIPage() {
                               );
                             }
 
-                            // If creation failed, show failure icon
+                            // If creation failed, show failure icon with retry button
                             if (creationSuccess === false) {
                               return (
-                                <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs whitespace-nowrap" title="Jira creation failed">
-                                  <FaExclamationCircle /> Failed
+                                <div className="group relative inline-flex">
+                                  <button
+                                    onClick={() => {
+                                      console.log("Failed button clicked for epic:", epic.id);
+                                      retryCreateEpicInJira(epic);
+                                    }}
+                                    type="button"
+                                    className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs whitespace-nowrap transition hover:cursor-pointer"
+                                    title="Click to retry creating this epic in Jira"
+                                  >
+                                    <FaExclamationCircle /> Failed
+                                  </button>
+                                  <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white rounded text-xs whitespace-nowrap z-10 pointer-events-none">
+                                    Click to retry
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                  </div>
                                 </div>
                               );
                             }
