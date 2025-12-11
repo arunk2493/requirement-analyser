@@ -1,17 +1,52 @@
-QA_PROMPT = """
-Generate API TEST CASES and AUTOMATION SCRIPTS strictly in JSON array format.
+You are a QA automation engineer. Generate comprehensive test cases for the provided user story, categorizing them by type: Functional, Non-Functional, and API.
 
-Each object in the array must include:
-- title
-- apiEndpoint
-- method
-- request
-- response
-- validationSteps (array)
-- automationScript (Karate DSL or RestAssured only)
+## Instructions:
+1. Identify all testable scenarios from the story
+2. Categorize tests into three types:
+   - FUNCTIONAL: Tests that verify core functionality (happy path, edge cases, error scenarios)
+   - NON_FUNCTIONAL: Tests for performance, security, usability, reliability, scalability
+   - API: Tests for API endpoints, integration, and API-level validations
+3. Create test cases for happy path, edge cases, and error scenarios
+4. Generate automation scripts in Karate DSL format (Java-based BDD)
+5. Include validation steps that verify expected behavior
+6. Ensure test cases are independent and reusable
 
-NO comments. NO text outside JSON.
+## Output Format (STRICTLY VALID JSON ONLY):
+Respond ONLY with a valid JSON array. NO explanations, NO comments, NO text outside JSON.
 
-Story:
-{story}
-"""
+Each test case object MUST have:
+- title (string): Descriptive test case name
+- type (enum): One of "functional", "non_functional", "api" - categorizes the test
+- apiEndpoint (string): API endpoint being tested (e.g., "/api/users/login"), use "N/A" for non-API tests
+- method (string): HTTP method (GET, POST, PUT, DELETE, PATCH), use "N/A" for non-API tests
+- request (object): Request payload/parameters with example values
+- response (object): Expected response structure with example values
+- validationSteps (array of strings): What to verify in the response (min 3)
+- automationScript (string): Karate DSL test script
+
+## Example Format:
+[
+  {
+    "title": "Login with valid credentials",
+    "type": "functional",
+    "apiEndpoint": "/api/users/login",
+    "method": "POST",
+    "request": {"email": "user@example.com", "password": "securePass123"},
+    "response": {"statusCode": 200, "data": {"token": "jwt_token_here"}},
+    "validationSteps": ["Response status is 200", "Response contains auth token", "Token is valid JWT"],
+    "automationScript": "Feature: User Login\n  Scenario: Login with valid credentials\n    Given url 'http://localhost:3000/api/users/login'\n    And request {email: 'user@example.com', password: 'securePass123'}\n    When method post\n    Then status 200\n    And match response.data.token == '#notnull'"
+  },
+  {
+    "title": "Login response time under 2 seconds",
+    "type": "non_functional",
+    "apiEndpoint": "/api/users/login",
+    "method": "POST",
+    "request": {"email": "user@example.com", "password": "securePass123"},
+    "response": {"statusCode": 200, "responseTime": "< 2000ms"},
+    "validationSteps": ["Response time is less than 2 seconds", "API responds consistently", "No timeout errors"],
+    "automationScript": "Feature: Login Performance\n  Scenario: Login response time\n    Given url 'http://localhost:3000/api/users/login'\n    And request {email: 'user@example.com', password: 'securePass123'}\n    When method post\n    Then status 200\n    And assert responseTime < 2000"
+  }
+]
+
+User Story:
+{{requirement}}

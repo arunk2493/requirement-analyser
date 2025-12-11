@@ -6,7 +6,7 @@ from .qa_agent import QAAgent
 from .testplan_agent import TestPlanAgent
 from .rag_agent import RAGAgent
 from models.file_model import Upload, Epic, Story, QA
-from config.db import get_db
+from config.db import get_db, get_db_context
 import logging
 from datetime import datetime
 
@@ -130,7 +130,7 @@ class AgentCoordinator:
         """Get all epics for a given upload"""
         logger.info(f"Coordinator: Fetching epics for upload {upload_id}, user {user_id}")
         try:
-            with get_db() as db:
+            with get_db_context() as db:
                 upload_obj = db.query(Upload).filter(Upload.id == upload_id).first()
                 if not upload_obj:
                     return create_coordinator_response(
@@ -158,6 +158,10 @@ class AgentCoordinator:
                             "content": e.content if isinstance(e.content, (dict, str)) else str(e.content),
                             "confluence_page_id": e.confluence_page_id,
                             "confluence_page_url": confluence_url,
+                            "jira_key": e.jira_key,
+                            "jira_issue_id": e.jira_issue_id,
+                            "jira_url": e.jira_url,
+                            "jira_creation_success": e.jira_creation_success,
                             "created_at": str(e.created_at) if e.created_at else None
                         }
                         epic_list.append(epic_data)
@@ -183,7 +187,7 @@ class AgentCoordinator:
         """Get all stories for a given epic"""
         logger.info(f"Coordinator: Fetching stories for epic {epic_id}, user {user_id}")
         try:
-            with get_db() as db:
+            with get_db_context() as db:
                 epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
                 if not epic_obj:
                     return create_coordinator_response(
@@ -210,6 +214,12 @@ class AgentCoordinator:
                             "id": s.id,
                             "name": s.name or "Untitled",
                             "content": s.content if isinstance(s.content, (dict, str)) else str(s.content),
+                            "jira_key": s.jira_key,
+                            "jira_issue_id": s.jira_issue_id,
+                            "jira_url": s.jira_url,
+                            "epic_jira_key": s.epic_jira_key,
+                            "epic_jira_issue_id": s.epic_jira_issue_id,
+                            "jira_creation_success": s.jira_creation_success,
                             "created_at": str(s.created_at) if s.created_at else None
                         }
                         story_list.append(story_data)
@@ -234,7 +244,7 @@ class AgentCoordinator:
         """Get all QA test cases for a given story"""
         logger.info(f"Coordinator: Fetching QA tests for story {story_id}, user {user_id}")
         try:
-            with get_db() as db:
+            with get_db_context() as db:
                 story_obj = db.query(Story).filter(Story.id == story_id).first()
                 if not story_obj:
                     return create_coordinator_response(
@@ -267,6 +277,7 @@ class AgentCoordinator:
                         qa_data = {
                             "id": q.id,
                             "story_id": q.story_id,
+                            "test_type": q.test_type,
                             "content": q.content if isinstance(q.content, (dict, str)) else str(q.content),
                             "created_at": str(q.created_at) if q.created_at else None
                         }
@@ -292,7 +303,7 @@ class AgentCoordinator:
         """Get all test plans for a given epic"""
         logger.info(f"Coordinator: Fetching test plans for epic {epic_id}, user {user_id}")
         try:
-            with get_db() as db:
+            with get_db_context() as db:
                 epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
                 if not epic_obj:
                     return create_coordinator_response(

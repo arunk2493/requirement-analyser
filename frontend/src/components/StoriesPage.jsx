@@ -57,7 +57,7 @@ export default function StoriesPage() {
           <div className="flex items-center gap-3">
             <FaList className="text-4xl text-green-600" />
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-              📖 Stories
+              Stories
             </h1>
           </div>
           <button
@@ -144,6 +144,7 @@ export default function StoriesPage() {
                       {sortBy === 'created_at' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
                     </button>
                   </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Jira</th>
                 </tr>
               </thead>
               <tbody>
@@ -153,6 +154,15 @@ export default function StoriesPage() {
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">{story.name}</td>
                       <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                         {new Date(story.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        {story.jira_url ? (
+                          <a href={story.jira_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition">
+                            <span className="inline-flex items-center gap-2">{story.jira_key || 'Open'}</span>
+                          </a>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500">N/A</span>
+                        )}
                       </td>
                     </tr>
                 ))}

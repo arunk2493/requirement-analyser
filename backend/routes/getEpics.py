@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.file_model import Upload, Epic
-from config.db import get_db
+from config.db import get_db, get_db_context
 from config.config import CONFLUENCE_URL
 from config.auth import get_current_user, TokenData
 from typing import Optional
@@ -33,7 +33,7 @@ def get_confluence_page_url(page_id: str) -> Optional[str]:
 @router.get("/epics/{upload_id}")
 def get_epics(upload_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get all epics for a given upload"""
-    with get_db() as db:
+    with get_db_context() as db:
         upload_obj = db.query(Upload).filter(Upload.id == upload_id, Upload.user_id == current_user.user_id).first()
         if not upload_obj:
             raise HTTPException(status_code=404, detail="Upload not found or you don't have access")
@@ -51,6 +51,10 @@ def get_epics(upload_id: int, current_user: TokenData = Depends(get_current_user
                 "content": epic.content,
                 "confluence_page_id": epic.confluence_page_id,
                 "confluence_page_url": get_confluence_page_url(epic.confluence_page_id),
+                "jira_key": epic.jira_key,
+                "jira_issue_id": epic.jira_issue_id,
+                "jira_url": epic.jira_url,
+                "jira_creation_success": epic.jira_creation_success,
                 "created_at": epic.created_at
             }
             epic_list.append(epic_data)
@@ -72,7 +76,7 @@ def get_all_epics(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Get all epics from user's uploads (paginated). Supports sorting by `id` or `created_at`."""
-    with get_db() as db:
+    with get_db_context() as db:
         # Get user's upload IDs
         user_uploads = db.query(Upload.id).filter(Upload.user_id == current_user.user_id).all()
         upload_ids = [u[0] for u in user_uploads]
@@ -112,6 +116,10 @@ def get_all_epics(
                 "content": epic.content,
                 "confluence_page_id": epic.confluence_page_id,
                 "confluence_page_url": get_confluence_page_url(epic.confluence_page_id),
+                "jira_key": epic.jira_key,
+                "jira_issue_id": epic.jira_issue_id,
+                "jira_url": epic.jira_url,
+                "jira_creation_success": epic.jira_creation_success,
                 "created_at": epic.created_at
             }
             epic_list.append(epic_data)
@@ -130,7 +138,7 @@ def get_all_epics(
 @router.get("/epics/{upload_id}/{epic_id}")
 def get_epic_details(upload_id: int, epic_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get details of a specific epic"""
-    with get_db() as db:
+    with get_db_context() as db:
         upload_obj = db.query(Upload).filter(Upload.id == upload_id, Upload.user_id == current_user.user_id).first()
         if not upload_obj:
             raise HTTPException(status_code=404, detail="Upload not found or you don't have access")
@@ -151,6 +159,10 @@ def get_epic_details(upload_id: int, epic_id: int, current_user: TokenData = Dep
                 "content": epic.content,
                 "confluence_page_id": epic.confluence_page_id,
                 "confluence_page_url": get_confluence_page_url(epic.confluence_page_id),
+                "jira_key": epic.jira_key,
+                "jira_issue_id": epic.jira_issue_id,
+                "jira_url": epic.jira_url,
+                "jira_creation_success": epic.jira_creation_success,
                 "created_at": epic.created_at
             }
         }

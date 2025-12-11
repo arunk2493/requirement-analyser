@@ -2,7 +2,7 @@ from typing import Dict, Any
 import json
 import re
 from config.gemini import generate_json
-from config.db import get_db
+from config.db import get_db, get_db_context
 from config.config import CONFLUENCE_URL
 from models.file_model import Epic, QA
 from atlassian import Confluence
@@ -74,7 +74,7 @@ class TestPlanAgent(BaseAgent):
                     error="Missing epic_id in context"
                 )
 
-            with get_db() as db:
+            with get_db_context() as db:
                 epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
                 if not epic_obj:
                     return self.create_response(

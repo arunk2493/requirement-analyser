@@ -29,6 +29,14 @@ api.interceptors.response.use(
       localStorage.removeItem("token");
       localStorage.removeItem("email");
       localStorage.removeItem("user_id");
+      
+      // Clear user selections
+      localStorage.removeItem("lastSelectedUploadId");
+      localStorage.removeItem("lastSelectedEpicForStories");
+      localStorage.removeItem("lastSelectedStoryId");
+      localStorage.removeItem("lastSelectedEpicForTestPlan");
+      localStorage.removeItem("jira_credentials");
+      
       window.location.href = "/";
     }
     return Promise.reject(error);

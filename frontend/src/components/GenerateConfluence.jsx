@@ -174,7 +174,7 @@ public class ${title.replace(/\\s+/g, '')}Test {
       {/* Header */}
       <div className="mb-8 flex items-center gap-3">
         <FaHistory className="text-4xl text-orange-600" />
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">📜 History</h1>
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">History</h1>
       </div>
       <p className="text-gray-600 dark:text-gray-400 mb-8">Recently created epics, stories, QA tests, and test plans (sorted by creation date - newest first)</p>
 
@@ -257,7 +257,7 @@ public class ${title.replace(/\\s+/g, '')}Test {
 
           {/* Row 2: QA Tests (Full width) */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-blue-600 mb-4">✅ Recent QA Tests (Top 5)</h2>
+            <h2 className="text-2xl font-bold text-blue-600 mb-4">Recent QA Tests (Top 5)</h2>
             {recentQA.length === 0 ? (
               <div className="text-gray-500 dark:text-gray-400 py-8 text-center">No QA tests created yet</div>
             ) : (

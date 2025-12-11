@@ -1,15 +1,39 @@
 STORIES_PROMPT = """
-Break down the following epic into STORIES strictly in JSON ARRAY format.
+You are an experienced agile product manager. Break down the provided epic into user stories and technical stories that can be completed within a sprint (3-5 days of work).
 
-Each story object must have:
-- name
-- type ("user_story" or "technical_story")
-- description
-- acceptanceCriteria (array)
-- implementationDetails (optional for technical stories)
+## Instructions:
+1. Understand the epic's purpose and scope
+2. Identify user-facing features first (user stories)
+3. Identify necessary technical/infrastructure work (technical stories)
+4. Ensure stories are independent and can be worked on in parallel
+5. Stories should be completable in 2-5 days
+6. Each story should deliver measurable value
 
-NO extra text. ONLY JSON array.
+## Output Format (STRICTLY VALID JSON ONLY):
+Respond ONLY with a valid JSON array. NO explanations, NO comments, NO text outside JSON.
 
-Epic:
-{epic}
+Each story object MUST have:
+- name (string): Story title (3-7 words, "As a user..." format preferred)
+- type (string): Either "user_story" or "technical_story"
+- description (string): Clear user story format or technical requirement description
+- acceptanceCriteria (array of strings): 3-4 specific, testable criteria
+- implementationDetails (string, optional): For technical stories, describe implementation approach
+
+## Example Format:
+[
+  {
+    "name": "User can login with email and password",
+    "type": "user_story",
+    "description": "As a user, I want to login to the application using my email and password so that I can access my account",
+    "acceptanceCriteria": [
+      "Login page displays email and password fields",
+      "Valid credentials authenticate user successfully",
+      "Invalid credentials show error message",
+      "Session is created and persists across pages"
+    ]
+  }
+]
+
+Epic Details:
+{{requirement}}
 """

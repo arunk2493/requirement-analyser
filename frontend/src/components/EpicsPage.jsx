@@ -49,7 +49,7 @@ export default function EpicsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FaBook className="text-4xl text-purple-600" />
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">🎯 Epics</h1>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Epics</h1>
           </div>
           <button
             onClick={() => loadEpics(currentPage)}
@@ -131,6 +131,7 @@ export default function EpicsPage() {
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Confluence</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Jira</th>
                 </tr>
               </thead>
               <tbody>
@@ -144,6 +145,15 @@ export default function EpicsPage() {
                         <a href={epic.confluence_page_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-md transition">
                           <FaExternalLinkAlt className="text-xs" />
                           <span>View</span>
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500">N/A</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      {epic.jira_url ? (
+                        <a href={epic.jira_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition">
+                          <span className="inline-flex items-center gap-2"><FaExternalLinkAlt className="text-xs" /> {epic.jira_key || 'Open'}</span>
                         </a>
                       ) : (
                         <span className="text-gray-400 dark:text-gray-500">N/A</span>

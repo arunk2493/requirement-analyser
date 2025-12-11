@@ -73,7 +73,7 @@ export default function SearchDocuments() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            🔍 Search Documents
+            Search Documents
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
             Search across all uploaded requirement documents using semantic similarity
@@ -129,7 +129,7 @@ export default function SearchDocuments() {
               </button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              💡 Searches across vectorstore JSON files and database (Epics, Test Plans) using semantic similarity. Returns top 10 most relevant results with minimum 30% relevance threshold.
+              💡 Searches across uploaded documents, Epics, and Test Plans using semantic similarity. Returns top results with minimum 45% relevance threshold.
             </p>
           </div>
         </div>

@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from fastapi import APIRouter, HTTPException, Depends
 from models.file_model import Epic, Story
 from config.gemini import generate_json
-from config.db import get_db
+from config.db import get_db, get_db_context
 from config.auth import get_current_user, TokenData
 from rag.vectorstore import VectorStore
 import uuid
@@ -22,7 +22,7 @@ def generate_stories(epic_id: int, current_user: TokenData = Depends(get_current
     logger = logging.getLogger(__name__)
     logger.info(f"generate_stories: Authenticated user={current_user.email}, user_id={current_user.user_id}")
     
-    with get_db() as db:
+    with get_db_context() as db:
         epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
         if not epic_obj:
             raise HTTPException(status_code=404, detail="Epic not found")

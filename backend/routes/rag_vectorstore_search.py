@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 import json
 import os
 import logging
@@ -10,8 +10,9 @@ import sys
 # Add backend directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models.file_model import Epic, QA
-from config.db import get_db
+from models.file_model import Epic, QA, Upload
+from config.db import get_db, get_db_context
+from config.auth import get_current_user, TokenData
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +178,7 @@ def _search_database(query, top_k=5):
         logger.info(f"Encoding query for database search: '{query}'")
         query_embedding = embedding_model.encode(query, show_progress_bar=False).tolist()
         
-        with get_db() as db:
+        with get_db_context() as db:
             # Search epics
             _search_epics_in_db(db, query_embedding, results)
             
@@ -284,27 +285,91 @@ def _search_test_plans_in_db(db, query_embedding, results):
         logger.error(f"Error searching test plans: {str(e)}")
 
 
+def _search_uploads_in_db(db, query_embedding, results, current_user: TokenData = None):
+    """
+    Search through uploaded documents (from uploads table).
+    Returns results sorted by similarity score.
+    """
+    try:
+        # Get user's uploads
+        if current_user:
+            uploads = db.query(Upload).filter(Upload.user_id == current_user.user_id).all()
+        else:
+            uploads = db.query(Upload).all()
+        
+        logger.info(f"Searching {len(uploads)} uploads")
+        
+        for upload in uploads:
+            try:
+                # Get the requirement text from content
+                if upload.content and isinstance(upload.content, dict):
+                    text = upload.content.get("requirement", "")
+                else:
+                    text = str(upload.content) if upload.content else ""
+                
+                if not text or len(text) < 5:
+                    continue
+                
+                # Encode text
+                doc_embedding = embedding_model.encode(text, show_progress_bar=False).tolist()
+                
+                # Calculate similarity
+                similarity = _calculate_similarity(query_embedding, doc_embedding)
+                
+                # Add to results if similarity is above threshold
+                if similarity > 0.1:
+                    results.append({
+                        "source": "upload",
+                        "document_id": f"upload_{upload.id}",
+                        "filename": upload.filename,
+                        "upload_id": upload.id,
+                        "text": text[:500],  # Truncate text for response
+                        "full_text": text,  # Keep full text for reference
+                        "similarity_score": round(similarity, 4),
+                        "similarity_percentage": round(similarity * 100, 2),
+                        "metadata": {
+                            "type": "requirement",
+                            "filename": upload.filename,
+                            "upload_id": upload.id
+                        }
+                    })
+            except Exception as e:
+                logger.error(f"Error processing upload {upload.id}: {str(e)}")
+                continue
+    
+    except Exception as e:
+        logger.error(f"Error searching uploads: {str(e)}")
+
+
 @router.get("/rag/vectorstore-search")
 def rag_vectorstore_search(
-    query: str = Query(..., description="Search query across vectorstore and database"),
-    top_k: int = Query(5, ge=1, le=10, description="Number of top results to return (max 10)")
+    query: str = Query(..., description="Search query across uploads and database"),
+    top_k: int = Query(5, ge=1, le=10, description="Number of top results to return (max 10)"),
+    current_user: TokenData = Depends(get_current_user)
 ):
     """
-    Search through vectorstore JSON files AND database (Epics, Test Plans) using semantic similarity.
+    Search through uploaded documents (uploads table) AND database (Epics, Test Plans) using semantic similarity.
     Returns matching documents ranked by relevance from both sources combined.
     """
     try:
         if not query or not query.strip():
             raise HTTPException(status_code=400, detail="Query cannot be empty")
         
-        logger.info(f"RAG combined search initiated for query: '{query}'")
+        logger.info(f"RAG combined search initiated for query: '{query}' by user {current_user.user_id}")
         
         # Search both sources
-        vectorstore_results = _search_vectorstore(query, top_k * 2)  # Get more to combine
-        database_results = _search_database(query, top_k * 2)
-        
-        # Combine results
-        all_results = vectorstore_results + database_results
+        with get_db_context() as db:
+            # Get query embedding
+            query_embedding = embedding_model.encode(query, show_progress_bar=False).tolist() if embedding_model else []
+            
+            all_results = []
+            
+            # Search uploads (user-specific)
+            _search_uploads_in_db(db, query_embedding, all_results, current_user)
+            
+            # Search database (epics and test plans)
+            _search_epics_in_db(db, query_embedding, all_results)
+            _search_test_plans_in_db(db, query_embedding, all_results)
         
         # Sort by similarity and limit to top_k
         all_results = sorted(all_results, key=lambda x: x["similarity_score"], reverse=True)[:top_k]
@@ -316,7 +381,7 @@ def rag_vectorstore_search(
                 "search_results": [],
                 "total_matches": 0,
                 "top_k_requested": top_k,
-                "sources": ["vectorstore", "database"]
+                "sources": ["uploads", "epics", "test_plans"]
             }
         
         logger.info(f"Combined search completed: {len(all_results)} total results")
@@ -327,7 +392,7 @@ def rag_vectorstore_search(
             "search_results": all_results,
             "total_matches": len(all_results),
             "top_k_requested": top_k,
-            "sources": ["vectorstore", "database"]
+            "sources": ["uploads", "epics", "test_plans"]
         }
     
     except HTTPException:
@@ -341,8 +406,9 @@ def rag_vectorstore_search(
 
 @router.post("/rag/vectorstore-search")
 def rag_vectorstore_search_post(
-    query: str = Query(..., description="Search query across vectorstore and database"),
-    top_k: int = Query(5, ge=1, le=10, description="Number of top results to return (max 10)")
+    query: str = Query(..., description="Search query across uploads and database"),
+    top_k: int = Query(5, ge=1, le=10, description="Number of top results to return (max 10)"),
+    current_user: TokenData = Depends(get_current_user)
 ):
     """POST endpoint for combined RAG search."""
-    return rag_vectorstore_search(query=query, top_k=top_k)
+    return rag_vectorstore_search(query=query, top_k=top_k, current_user=current_user)

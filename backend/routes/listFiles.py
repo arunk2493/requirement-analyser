@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi import APIRouter, Depends
-from config.db import get_db
+from config.db import get_db, get_db_context
 from config.auth import get_current_user, TokenData
 from models.file_model import Upload, Epic, Story, QA, AggregatedUpload
 
@@ -13,7 +13,7 @@ router = APIRouter()
 
 @router.get("/list-files")
 def list_files(current_user: TokenData = Depends(get_current_user)):
-    with get_db() as db:
+    with get_db_context() as db:
         uploads = db.query(Upload).filter(Upload.user_id == current_user.user_id).all()
         result = []
 

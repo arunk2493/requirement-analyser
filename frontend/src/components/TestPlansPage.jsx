@@ -57,7 +57,7 @@ export default function TestPlansPage() {
           <div className="flex items-center gap-3">
             <FaFlask className="text-4xl text-orange-600" />
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-              🧪 Test Plans
+              Test Plans
             </h1>
           </div>
           <button

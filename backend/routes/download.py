@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from models.file_model import AggregatedUpload
-from config.db import get_db
+from config.db import get_db, get_db_context
 import json
 from io import BytesIO
 from fpdf import FPDF
@@ -13,7 +13,7 @@ def download_aggregated(
     upload_id: int,
     format: str = Query("json", enum=["json", "pdf"])
 ):
-    with get_db() as db:
+    with get_db_context() as db:
         agg = db.query(AggregatedUpload).filter(AggregatedUpload.upload_id == upload_id).first()
         if not agg:
             raise HTTPException(status_code=404, detail="Aggregated data not found")

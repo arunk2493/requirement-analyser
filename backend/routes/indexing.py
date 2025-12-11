@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from models.file_model import Upload, Epic, Story, QA
-from config.db import get_db
+from config.db import get_db, get_db_context
 from rag.vectorstore import VectorStore
 import uuid
 import json
@@ -14,7 +14,7 @@ def reindex_all():
     """Reindex all content from database into vectorstore"""
     indexed_count = 0
     
-    with get_db() as db:
+    with get_db_context() as db:
         # Index all epics
         epics = db.query(Epic).all()
         for epic in epics:

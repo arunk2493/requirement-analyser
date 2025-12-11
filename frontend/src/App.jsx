@@ -11,6 +11,7 @@ import History from "./components/GenerateConfluence";
 import AgenticAIPage from "./components/AgenticAIPage";
 import Dashboard from "./components/Dashboard";
 import SearchDocuments from "./components/SearchDocuments";
+import JiraIntegration from "./components/JiraIntegration";
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -72,6 +73,7 @@ export default function App() {
               <Route path="/stories" element={<StoriesPage />} />
               <Route path="/qa" element={<QAPage />} />
               <Route path="/testplans" element={<TestPlansPage />} />
+              <Route path="/jira-integration" element={<JiraIntegration />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </div>
