@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { generateEpicsAgent, generateStoriesAgent, generateQAAgent, generateTestPlanAgent, ragSearch, ragVectorStoreSearch, fetchUploads, getEpicsAgent, getStoriesAgent, getQAAgent, getTestPlanAgent } from "../api/api";
 import { FaRobot, FaSpinner, FaExternalLinkAlt, FaSync, FaCheckCircle, FaTimesCircle, FaArrowRight, FaJira } from "react-icons/fa";
 import { Toast } from "primereact/toast";
+import { Dropdown } from "primereact/dropdown";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -1225,31 +1226,32 @@ export default function AgenticAIPage() {
                   <FaSpinner className="animate-spin text-purple-500" />
                 </div>
               ) : (
-                <select
+                <Dropdown
                   value={uploadId}
-                  onChange={handleUploadChange}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                >
-                  <option value="">-- Choose an upload --</option>
-                  {recentUploads.length > 0 && (
-                    <optgroup label="📌 Recent Uploads">
-                      {recentUploads.map((upload) => (
-                        <option key={`recent-${upload.id}`} value={upload.id}>
-                          ⭐ {upload.filename} (ID: {upload.id})
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {userUploads.length > 0 && (
-                    <optgroup label="All Uploads">
-                      {userUploads.map((upload) => (
-                        <option key={upload.id} value={upload.id}>
-                          {upload.filename} (ID: {upload.id})
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
+                  onChange={(e) => handleUploadChange({ target: { value: e.value } })}
+                  options={[
+                    recentUploads.length > 0 ? {
+                      label: "📌 Recent Uploads",
+                      items: recentUploads.map((upload) => ({
+                        label: `⭐ ${upload.filename} (ID: ${upload.id})`,
+                        value: upload.id
+                      }))
+                    } : null,
+                    userUploads.length > 0 ? {
+                      label: "All Uploads",
+                      items: userUploads.map((upload) => ({
+                        label: `${upload.filename} (ID: ${upload.id})`,
+                        value: upload.id
+                      }))
+                    } : null
+                  ].filter(Boolean)}
+                  optionGroupLabel="label"
+                  optionGroupChildren="items"
+                  placeholder="-- Choose an upload --"
+                  className="w-full p-3"
+                  panelClassName="dark:bg-gray-700 dark:text-white"
+                  showClear
+                />
               )}
             </div>
             <div className="relative group">
@@ -1403,31 +1405,32 @@ export default function AgenticAIPage() {
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Select Epic {generatedEpics.length > 0 && <span className="text-orange-600">({generatedEpics.length})</span>}
               </label>
-              <select
+              <Dropdown
                 value={epicIdForTestPlan}
-                onChange={handleEpicForTestPlanChange}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
-              >
-                <option value="">-- Choose an epic --</option>
-                {recentEpics.length > 0 && (
-                  <optgroup label="📌 Recent Epics">
-                    {recentEpics.map((epic) => (
-                      <option key={`recent-${epic.id}`} value={epic.id}>
-                        ⭐ {epic.name} (ID: {epic.id})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {generatedEpics.length > 0 && (
-                  <optgroup label="All Epics">
-                    {generatedEpics.map((epic) => (
-                      <option key={epic.id} value={epic.id}>
-                        {epic.name} (ID: {epic.id})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
+                onChange={(e) => handleEpicForTestPlanChange({ target: { value: e.value } })}
+                options={[
+                  recentEpics.length > 0 ? {
+                    label: "📌 Recent Epics",
+                    items: recentEpics.map((epic) => ({
+                      label: `⭐ ${epic.name} (ID: ${epic.id})`,
+                      value: epic.id
+                    }))
+                  } : null,
+                  generatedEpics.length > 0 ? {
+                    label: "All Epics",
+                    items: generatedEpics.map((epic) => ({
+                      label: `${epic.name} (ID: ${epic.id})`,
+                      value: epic.id
+                    }))
+                  } : null
+                ].filter(Boolean)}
+                optionGroupLabel="label"
+                optionGroupChildren="items"
+                placeholder="-- Choose an epic --"
+                className="w-full p-3"
+                panelClassName="dark:bg-gray-700 dark:text-white"
+                showClear
+              />
               {generatedEpics.length === 0 && uploadId && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                   💡 Generate epics first to create test plans
@@ -1538,31 +1541,32 @@ export default function AgenticAIPage() {
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Select Epic {generatedEpics.length > 0 && <span className="text-purple-600">({generatedEpics.length})</span>}
               </label>
-              <select
+              <Dropdown
                 value={epicIdForStories}
-                onChange={handleEpicForStoriesChange}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none"
-              >
-                <option value="">-- Choose an epic --</option>
-                {recentEpics.length > 0 && (
-                  <optgroup label="📌 Recent Epics">
-                    {recentEpics.map((epic) => (
-                      <option key={`recent-${epic.id}`} value={epic.id}>
-                        ⭐ {epic.name} (ID: {epic.id})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {generatedEpics.length > 0 && (
-                  <optgroup label="All Epics">
-                    {generatedEpics.map((epic) => (
-                      <option key={epic.id} value={epic.id}>
-                        {epic.name} (ID: {epic.id})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
+                onChange={(e) => handleEpicForStoriesChange({ target: { value: e.value } })}
+                options={[
+                  recentEpics.length > 0 ? {
+                    label: "📌 Recent Epics",
+                    items: recentEpics.map((epic) => ({
+                      label: `⭐ ${epic.name} (ID: ${epic.id})`,
+                      value: epic.id
+                    }))
+                  } : null,
+                  generatedEpics.length > 0 ? {
+                    label: "All Epics",
+                    items: generatedEpics.map((epic) => ({
+                      label: `${epic.name} (ID: ${epic.id})`,
+                      value: epic.id
+                    }))
+                  } : null
+                ].filter(Boolean)}
+                optionGroupLabel="label"
+                optionGroupChildren="items"
+                placeholder="-- Choose an epic --"
+                className="w-full p-3"
+                panelClassName="dark:bg-gray-700 dark:text-white"
+                showClear
+              />
               {generatedEpics.length === 0 && uploadId && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                   💡 Select an upload first - epic list will load automatically
@@ -1706,31 +1710,32 @@ export default function AgenticAIPage() {
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Select Story {generatedStories.length > 0 && <span className="text-blue-600">({generatedStories.length})</span>}
               </label>
-              <select
+              <Dropdown
                 value={storyId}
-                onChange={handleStoryChange}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="">-- Choose a story --</option>
-                {recentStories.length > 0 && (
-                  <optgroup label="📌 Recent Stories">
-                    {recentStories.map((story) => (
-                      <option key={`recent-${story.id}`} value={story.id}>
-                        ⭐ {story.name || "Untitled"} (ID: {story.id})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {generatedStories.length > 0 && (
-                  <optgroup label="All Stories">
-                    {generatedStories.map((story) => (
-                      <option key={story.id} value={story.id}>
-                        {story.name || "Untitled"} (ID: {story.id})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
+                onChange={(e) => handleStoryChange({ target: { value: e.value } })}
+                options={[
+                  recentStories.length > 0 ? {
+                    label: "📌 Recent Stories",
+                    items: recentStories.map((story) => ({
+                      label: `⭐ ${story.name || "Untitled"} (ID: ${story.id})`,
+                      value: story.id
+                    }))
+                  } : null,
+                  generatedStories.length > 0 ? {
+                    label: "All Stories",
+                    items: generatedStories.map((story) => ({
+                      label: `${story.name || "Untitled"} (ID: ${story.id})`,
+                      value: story.id
+                    }))
+                  } : null
+                ].filter(Boolean)}
+                optionGroupLabel="label"
+                optionGroupChildren="items"
+                placeholder="-- Choose a story --"
+                className="w-full p-3"
+                panelClassName="dark:bg-gray-700 dark:text-white"
+                showClear
+              />
               {generatedStories.length === 0 && epicIdForStories && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                   💡 No existing stories found. Generate stories from the selected epic.
