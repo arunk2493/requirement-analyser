@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.file_model import Upload, Epic, Story, QA
-from config.db import get_db
+from config.db import get_db, get_db_context
 from config.auth import get_current_user, TokenData
 
 router = APIRouter()
@@ -14,7 +14,7 @@ router = APIRouter()
 @router.get("/qa/{story_id}")
 def get_qa(story_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get all QA test cases for a given story"""
-    with get_db() as db:
+    with get_db_context() as db:
         story_obj = db.query(Story).filter(Story.id == story_id).first()
         if not story_obj:
             raise HTTPException(status_code=404, detail="Story not found")
@@ -52,7 +52,7 @@ def get_qa(story_id: int, current_user: TokenData = Depends(get_current_user)):
 @router.get("/qa/{story_id}/{qa_id}")
 def get_qa_details(story_id: int, qa_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get details of a specific QA test case"""
-    with get_db() as db:
+    with get_db_context() as db:
         story_obj = db.query(Story).filter(Story.id == story_id).first()
         if not story_obj:
             raise HTTPException(status_code=404, detail="Story not found")
@@ -91,7 +91,7 @@ def get_all_qa(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Get all QA test cases from user's stories (paginated). Supports sorting by `id` or `created_at`."""
-    with get_db() as db:
+    with get_db_context() as db:
         # Get user's uploads, epics, and stories
         user_uploads = db.query(Upload.id).filter(Upload.user_id == current_user.user_id).all()
         upload_ids = [u[0] for u in user_uploads]

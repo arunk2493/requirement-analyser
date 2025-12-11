@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from fastapi import APIRouter, HTTPException, Depends, status
 from models.file_model import Upload, Epic, QA
 from config.gemini import generate_json
-from config.db import get_db
+from config.db import get_db, get_db_context
 from config.auth import get_current_user, TokenData
 from atlassian import Confluence
 from config.config import CONFLUENCE_URL, CONFLUENCE_USERNAME, CONFLUENCE_PASSWORD, CONFLUENCE_SPACE_KEY, CONFLUENCE_ROOT_FOLDER_ID
@@ -100,7 +100,7 @@ def generate_epics(upload_id: int, current_user: TokenData = Depends(get_current
     logger = logging.getLogger(__name__)
     logger.info(f"generate_epics: Authenticated user={current_user.email}, user_id={current_user.user_id}")
     
-    with get_db() as db:
+    with get_db_context() as db:
         upload_obj = db.query(Upload).filter(Upload.id == upload_id).first()
         if not upload_obj:
             raise HTTPException(status_code=404, detail="Upload not found")

@@ -41,9 +41,30 @@ else:
 
 Base = declarative_base()
 
-@contextmanager
 def get_db():
-    """Get database session with proper transaction management"""
+    """Get database session with proper transaction management - FastAPI dependency"""
+    if not SessionLocal:
+        raise RuntimeError("Database not configured. Set POSTGRES_URL environment variable.")
+    
+    db = SessionLocal()
+    try:
+        logger.debug("Database session created")
+        yield db
+        # Only commit if no exception occurred
+        db.commit()
+        logger.debug("Database transaction committed")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Database transaction rolled back due to error: {str(e)}")
+        raise
+    finally:
+        db.close()
+        logger.debug("Database session closed")
+
+
+@contextmanager
+def get_db_context():
+    """Context manager for database session - for use with 'with' statements"""
     if not SessionLocal:
         raise RuntimeError("Database not configured. Set POSTGRES_URL environment variable.")
     

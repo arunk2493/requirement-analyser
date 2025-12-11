@@ -1,6 +1,6 @@
 from typing import Dict, Any
 from config.gemini import generate_json
-from config.db import get_db
+from config.db import get_db, get_db_context
 from models.file_model import Upload, Epic, QA
 from config.config import CONFLUENCE_URL
 import datetime
@@ -87,7 +87,7 @@ class EpicAgent(BaseAgent):
                     error="Missing upload_id in context"
                 )
 
-            with get_db() as db:
+            with get_db_context() as db:
                 upload_obj = db.query(Upload).filter(Upload.id == upload_id).first()
                 if not upload_obj:
                     return self.create_response(

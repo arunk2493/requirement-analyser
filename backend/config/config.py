@@ -10,3 +10,6 @@ CONFLUENCE_USERNAME = os.getenv("confluence_username")
 CONFLUENCE_PASSWORD = os.getenv("confluence_password")
 CONFLUENCE_SPACE_KEY = os.getenv("confluence_space_key")
 CONFLUENCE_ROOT_FOLDER_ID = os.getenv("confluence_root_folder_id")
+
+# Jira Configuration
+JIRA_API_TOKEN_ENCRYPTION_KEY = os.getenv("JIRA_ENCRYPTION_KEY", "default-encryption-key-change-in-production")

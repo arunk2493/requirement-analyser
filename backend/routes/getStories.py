@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.file_model import Upload, Epic, Story
-from config.db import get_db
+from config.db import get_db, get_db_context
 from config.auth import get_current_user, TokenData
 
 router = APIRouter()
@@ -25,7 +25,7 @@ def safe_serialize_content(content):
 @router.get("/stories/{epic_id}")
 def get_stories(epic_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get all stories for a given epic"""
-    with get_db() as db:
+    with get_db_context() as db:
         epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
         if not epic_obj:
             raise HTTPException(status_code=404, detail="Epic not found")
@@ -45,6 +45,12 @@ def get_stories(epic_id: int, current_user: TokenData = Depends(get_current_user
                     "id": story.id,
                     "name": story.name or "Untitled",
                     "content": safe_serialize_content(story.content),
+                    "jira_key": story.jira_key,
+                    "jira_issue_id": story.jira_issue_id,
+                    "jira_url": story.jira_url,
+                    "epic_jira_key": story.epic_jira_key,
+                    "epic_jira_issue_id": story.epic_jira_issue_id,
+                    "jira_creation_success": story.jira_creation_success,
                     "created_at": str(story.created_at) if story.created_at else None
                 }
                 story_list.append(story_data)
@@ -62,7 +68,7 @@ def get_stories(epic_id: int, current_user: TokenData = Depends(get_current_user
 @router.get("/stories/{epic_id}/{story_id}")
 def get_story_details(epic_id: int, story_id: int, current_user: TokenData = Depends(get_current_user)):
     """Get details of a specific story"""
-    with get_db() as db:
+    with get_db_context() as db:
         epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
         if not epic_obj:
             raise HTTPException(status_code=404, detail="Epic not found")
@@ -84,6 +90,12 @@ def get_story_details(epic_id: int, story_id: int, current_user: TokenData = Dep
                 "id": story.id,
                 "name": story.name or "Untitled",
                 "content": safe_serialize_content(story.content),
+                "jira_key": story.jira_key,
+                "jira_issue_id": story.jira_issue_id,
+                "jira_url": story.jira_url,
+                "epic_jira_key": story.epic_jira_key,
+                "epic_jira_issue_id": story.epic_jira_issue_id,
+                "jira_creation_success": story.jira_creation_success,
                 "created_at": str(story.created_at) if story.created_at else None
             }
         }
@@ -98,7 +110,7 @@ def get_all_stories(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Get all stories from user's epics (paginated). Supports sorting by `id` or `created_at`."""
-    with get_db() as db:
+    with get_db_context() as db:
         # Get user's uploads and epics
         user_uploads = db.query(Upload.id).filter(Upload.user_id == current_user.user_id).all()
         upload_ids = [u[0] for u in user_uploads]
@@ -150,6 +162,12 @@ def get_all_stories(
                     "name": story.name or "Untitled",
                     "content": safe_serialize_content(story.content),
                     "epic_id": story.epic_id,
+                    "jira_key": story.jira_key,
+                    "jira_issue_id": story.jira_issue_id,
+                    "jira_url": story.jira_url,
+                    "epic_jira_key": story.epic_jira_key,
+                    "epic_jira_issue_id": story.epic_jira_issue_id,
+                    "jira_creation_success": story.jira_creation_success,
                     "created_at": str(story.created_at) if story.created_at else None
                 }
                 story_list.append(story_data)

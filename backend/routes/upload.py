@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.file_model import Upload, Epic
-from config.db import get_db
+from config.db import get_db, get_db_context
 from config.config import CONFLUENCE_URL
 from config.auth import get_current_user, TokenData
 from rag.vectorstore import VectorStore
@@ -59,7 +59,7 @@ async def upload_file(
         content_json = {"requirement": text}
 
         # Store in DB
-        with get_db() as db:
+        with get_db_context() as db:
             upload_obj = Upload(
                 filename=file.filename, 
                 content=content_json,
@@ -112,7 +112,7 @@ def get_all_uploads(
 ):
     """Get all uploaded files for current user with pagination. Returns file info with first epic's Confluence link if available."""
     try:
-        with get_db() as db:
+        with get_db_context() as db:
             # Get total count for current user only
             total_count = db.query(Upload).filter(Upload.user_id == current_user.user_id).count()
             

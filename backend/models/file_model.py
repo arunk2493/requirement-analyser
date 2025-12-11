@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey
+from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 import sys
@@ -15,6 +15,11 @@ class User(Base):
     name = Column(String(255))
     email = Column(String(255), unique=True, index=True)
     hashed_password = Column(String(255))
+    # Jira credentials (encrypted in production recommended)
+    jira_url = Column(String(512), nullable=True)
+    jira_username = Column(String(255), nullable=True)
+    jira_api_token = Column(String(512), nullable=True)
+    jira_project_key = Column(String(50), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 class Upload(Base):
@@ -34,6 +39,10 @@ class Epic(Base):
     name = Column(String(255))
     content = Column(JSONB)  # epic details as JSON
     confluence_page_id = Column(String(255), nullable=True)  # Confluence page ID
+    jira_key = Column(String(50), nullable=True)  # Jira issue key (e.g., PROJ-1)
+    jira_issue_id = Column(String(50), nullable=True)  # Jira issue ID (numeric, e.g., 10028)
+    jira_url = Column(String(512), nullable=True)  # Jira issue URL
+    jira_creation_success = Column(Boolean, nullable=True)  # True if Jira creation succeeded, False if failed, None if not attempted
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 class Story(Base):
@@ -42,6 +51,12 @@ class Story(Base):
     epic_id = Column(Integer, ForeignKey("epics.id", ondelete="CASCADE"))
     name = Column(String(255))
     content = Column(JSONB)  # story details as JSON
+    jira_key = Column(String(50), nullable=True)  # Jira issue key (e.g., PROJ-2)
+    jira_issue_id = Column(String(50), nullable=True)  # Jira issue ID (numeric, e.g., 10030)
+    jira_url = Column(String(512), nullable=True)  # Jira issue URL
+    epic_jira_key = Column(String(50), nullable=True)  # Parent epic's Jira key
+    epic_jira_issue_id = Column(String(50), nullable=True)  # Parent epic's Jira issue ID (numeric)
+    jira_creation_success = Column(Boolean, nullable=True)  # True if Jira creation succeeded, False if failed, None if not attempted
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 class QA(Base):

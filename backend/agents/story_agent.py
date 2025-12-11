@@ -1,6 +1,6 @@
 from typing import Dict, Any
 from config.gemini import generate_json
-from config.db import get_db
+from config.db import get_db, get_db_context
 from models.file_model import Epic, Story
 from .base_agent import BaseAgent, AgentResponse
 
@@ -27,7 +27,7 @@ class StoryAgent(BaseAgent):
                     error="Missing epic_id in context"
                 )
 
-            with get_db() as db:
+            with get_db_context() as db:
                 epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
                 if not epic_obj:
                     return self.create_response(

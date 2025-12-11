@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from models.file_model import Upload, Epic, QA
-from config.db import get_db
+from config.db import get_db, get_db_context
 import numpy as np
 import logging
 from sentence_transformers import SentenceTransformer
@@ -181,7 +181,7 @@ def rag_search_database(
         if not query or not query.strip():
             raise HTTPException(status_code=400, detail="Query cannot be empty")
         
-        with get_db() as db:
+        with get_db_context() as db:
             results = _search_database_only(db, query, top_k)
             
             logger.info(f"RAG search completed: {len(results)} results for '{query}'")
@@ -235,7 +235,7 @@ def rag_search_grouped_by_upload(
         if not query or not query.strip():
             raise HTTPException(status_code=400, detail="Query cannot be empty")
         
-        with get_db() as db:
+        with get_db_context() as db:
             results = _search_database_only(db, query, top_k * 3)
             
             # Group results by upload

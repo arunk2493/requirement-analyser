@@ -2,7 +2,7 @@ from typing import Dict, Any
 import json
 import re
 from config.gemini import generate_json
-from config.db import get_db
+from config.db import get_db, get_db_context
 from models.file_model import Story, QA
 from .base_agent import BaseAgent, AgentResponse
 
@@ -48,7 +48,7 @@ class QAAgent(BaseAgent):
                     error="Missing story_id in context"
                 )
 
-            with get_db() as db:
+            with get_db_context() as db:
                 story_obj = db.query(Story).filter(Story.id == story_id).first()
                 if not story_obj:
                     return self.create_response(

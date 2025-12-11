@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.file_model import Epic, QA
-from config.db import get_db
+from config.db import get_db, get_db_context
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +177,7 @@ def _search_database(query, top_k=5):
         logger.info(f"Encoding query for database search: '{query}'")
         query_embedding = embedding_model.encode(query, show_progress_bar=False).tolist()
         
-        with get_db() as db:
+        with get_db_context() as db:
             # Search epics
             _search_epics_in_db(db, query_embedding, results)
             

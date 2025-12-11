@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from models.file_model import User
-from config.db import get_db
+from config.db import get_db, get_db_context
 from config.auth import (
     hash_password,
     verify_password,
@@ -49,7 +49,7 @@ async def register(user: UserRegister):
     """Register a new user with email and password"""
     logger.info(f"=== Registration attempt for email: {user.email} ===")
     try:
-        with get_db() as db:
+        with get_db_context() as db:
             logger.info("Database session opened")
             
             # Check if user already exists
@@ -117,7 +117,7 @@ async def login(user: UserLogin):
     try:
         logger.info(f"Login attempt for email: {user.email}")
         
-        with get_db() as db:
+        with get_db_context() as db:
             # Find user by email
             db_user = db.query(User).filter(User.email == user.email).first()
             
@@ -173,7 +173,7 @@ async def verify_user_token(token: str):
                 detail="Invalid or expired token"
             )
         
-        with get_db() as db:
+        with get_db_context() as db:
             user = db.query(User).filter(User.email == token_data.email).first()
             
             if not user:

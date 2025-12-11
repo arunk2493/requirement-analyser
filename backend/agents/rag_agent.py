@@ -1,5 +1,5 @@
 from typing import Dict, Any, List
-from config.db import get_db
+from config.db import get_db, get_db_context
 from models.file_model import Upload, Epic, QA
 from rag.embedder import EmbeddingManager
 from .base_agent import BaseAgent, AgentResponse
@@ -83,7 +83,7 @@ class RAGAgent(BaseAgent):
 
             results = []
 
-            with get_db() as db:
+            with get_db_context() as db:
                 # Search in uploads table
                 uploads = db.query(Upload).all()
                 

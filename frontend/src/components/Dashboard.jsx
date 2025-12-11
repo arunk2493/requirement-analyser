@@ -7,6 +7,7 @@ import {
   FaFlask,
   FaArrowRight,
   FaFileAlt,
+  FaJira,
 } from "react-icons/fa";
 
 export default function Dashboard() {
@@ -60,6 +61,14 @@ export default function Dashboard() {
       color: "from-orange-500 to-orange-600",
       count: stats.testplans,
     },
+    {
+      title: "🔌 Jira Integration",
+      description: "Connect and sync to Jira",
+      icon: <FaJira className="text-4xl" />,
+      link: "/jira-integration",
+      color: "from-cyan-500 to-blue-600",
+      count: 0,
+    },
   ];
 
   return (
@@ -75,7 +84,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
         {cards.map((card, idx) => (
           <Link
             key={idx}
