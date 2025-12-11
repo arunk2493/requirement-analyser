@@ -1,15 +1,49 @@
 TESTPLAN_PROMPT = """
-Generate a detailed TEST PLAN strictly in JSON ARRAY format.
+You are a test planning specialist. Generate a comprehensive test plan for the provided user story covering all testing aspects.
 
-Each test plan object must include:
-- title
-- objective
-- preconditions
-- testScenarios (array)
-- risks
+## Instructions:
+1. Define clear testing objectives aligned with story requirements
+2. List all preconditions and setup requirements
+3. Create comprehensive test scenarios covering:
+   - Happy path (normal usage)
+   - Edge cases (boundary conditions)
+   - Error scenarios (invalid inputs, failures)
+   - Negative testing (unauthorized access, invalid data)
+4. Identify and document risks and mitigation strategies
+5. Ensure test scenarios are clear, specific, and measurable
 
-NO explanations. NO text outside JSON.
+## Output Format (STRICTLY VALID JSON ONLY):
+Respond ONLY with a valid JSON array. NO explanations, NO comments, NO text outside JSON.
 
-Story:
-{story}
+Each test plan object MUST have:
+- title (string): Test plan title
+- objective (string): What this test plan validates
+- preconditions (array of strings): Setup requirements before testing
+- testScenarios (array of objects): Each scenario with name, steps, and expected results
+- risks (array of strings): Potential risks and mitigation strategies
+
+## Example Format:
+[
+  {
+    "title": "Login Feature Test Plan",
+    "objective": "Validate that users can securely login and access protected resources",
+    "preconditions": ["Database is populated with test users", "Application server is running", "SSL certificate is valid"],
+    "testScenarios": [
+      {
+        "name": "Valid user login",
+        "steps": ["Navigate to login page", "Enter valid email and password", "Click login button"],
+        "expectedResult": "User is authenticated and redirected to dashboard"
+      },
+      {
+        "name": "Invalid password",
+        "steps": ["Navigate to login page", "Enter valid email but wrong password", "Click login button"],
+        "expectedResult": "Error message shown, user not authenticated"
+      }
+    ],
+    "risks": ["SQL injection attacks - use parameterized queries", "Brute force attacks - implement rate limiting", "Session hijacking - use secure, httpOnly cookies"]
+  }
+]
+
+User Story:
+{{requirement}}
 """

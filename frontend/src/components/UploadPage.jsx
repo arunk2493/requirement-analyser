@@ -7,6 +7,7 @@ export default function UploadPage() {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState(null); // "success" or "error"
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploads, setUploads] = useState([]);
   const [uploadsLoading, setUploadsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,13 +47,16 @@ export default function UploadPage() {
     }
 
     setLoading(true);
+    setUploadProgress(10);
     const formData = new FormData();
     formData.append("file", file);
 
     try {
+      setUploadProgress(50);
       const response = await api.post("/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      setUploadProgress(75);
       setMessage(`✅ Upload successful! File ID: ${response.data.upload_id}`);
       setStatus("success");
       setFile(null);
@@ -63,6 +67,7 @@ export default function UploadPage() {
       setStatus("error");
     } finally {
       setLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -135,8 +140,18 @@ export default function UploadPage() {
                   : "bg-gray-400 cursor-not-allowed"
               }`}
             >
-              {loading ? "📤 Uploading..." : "📤 Upload File"}
+              {loading ? `📤 Uploading... ${uploadProgress}%` : "📤 Upload File"}
             </button>
+
+            {/* Progress Bar */}
+            {loading && (
+              <div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            )}
 
             {/* Message Display */}
             {message && (
