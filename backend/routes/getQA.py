@@ -153,10 +153,15 @@ def get_all_qa(
 
         qa_list = []
         for qa in qa_tests:
+            # Get story details to include jira_key
+            story = db.query(Story).filter(Story.id == qa.story_id).first()
             qa_data = {
                 "id": qa.id,
                 "content": qa.content,
                 "story_id": qa.story_id,
+                "story_name": story.name if story else "Unknown",
+                "story_jira_key": story.jira_key if story else None,
+                "test_type": qa.test_type,
                 "created_at": qa.created_at
             }
             qa_list.append(qa_data)
