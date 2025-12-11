@@ -4,13 +4,33 @@ import { FaRobot, FaSpinner, FaExternalLinkAlt, FaSync, FaCheckCircle, FaExclama
 
 const API_BASE_URL = "http://localhost:8000";
 
+/**
+ * AgenticAIPage Component
+ * 
+ * Main page for generating epics, stories, QA tests, and test plans using AI agents.
+ * Features:
+ * - Upload selection and management
+ * - Epic generation and Jira integration
+ * - Story generation with parent epic linking
+ * - QA test generation for stories
+ * - Test plan generation for epics
+ * - RAG-based document search
+ * - Real-time progress tracking
+ * - Error handling and retry mechanisms
+ */
 export default function AgenticAIPage() {
+  // ============================================================================
+  // STATE MANAGEMENT - Selection State
+  // ============================================================================
   const [uploadId, setUploadId] = useState("");
   const [epicIdForStories, setEpicIdForStories] = useState("");
   const [epicIdForTestPlan, setEpicIdForTestPlan] = useState("");
   const [storyId, setStoryId] = useState("");
   const [ragQuery, setRagQuery] = useState("");
 
+  // ============================================================================
+  // STATE MANAGEMENT - Data State
+  // ============================================================================
   const [userUploads, setUserUploads] = useState([]);
   const [loadingUploads, setLoadingUploads] = useState(true);
   
@@ -20,35 +40,48 @@ export default function AgenticAIPage() {
   const [loadingTestPlan, setLoadingTestPlan] = useState(false);
   const [loadingRAG, setLoadingRAG] = useState(false);
 
-  // Progress tracking for generation tasks
+  // ============================================================================
+  // STATE MANAGEMENT - Progress Tracking
+  // ============================================================================
   const [epicProgress, setEpicProgress] = useState(0);
   const [storyProgress, setStoryProgress] = useState(0);
   const [qaProgress, setQAProgress] = useState(0);
   const [testPlanProgress, setTestPlanProgress] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  // ============================================================================
+  // STATE MANAGEMENT - Generated Content
+  // ============================================================================
   const [generatedEpics, setGeneratedEpics] = useState([]);
   const [generatedStories, setGeneratedStories] = useState([]);
   const [generatedQA, setGeneratedQA] = useState([]);
   const [generatedTestPlans, setGeneratedTestPlans] = useState([]);
   const [ragResults, setRagResults] = useState([]);
 
-  // Recent items for quick access (last 5)
+  // ============================================================================
+  // STATE MANAGEMENT - Recent Items for Quick Access
+  // ============================================================================
   const [recentEpics, setRecentEpics] = useState([]);
   const [recentStories, setRecentStories] = useState([]);
   const [recentQA, setRecentQA] = useState([]);
   const [recentUploads, setRecentUploads] = useState([]);
 
+  // ============================================================================
+  // STATE MANAGEMENT - Messaging
+  // ============================================================================
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Jira state
+  // ============================================================================
+  // STATE MANAGEMENT - Jira Integration
+  // ============================================================================
   const [jiraCredentials, setJiraCredentials] = useState(null);
   const [loadingJiraItems, setLoadingJiraItems] = useState(new Set()); // Track loading per item
   const [jiraResults, setJiraResults] = useState({});
 
-  // QA filtering moved to dedicated QAPage component
-
+  // ============================================================================
+  // LIFECYCLE HOOKS - Initialize Component
+  // ============================================================================
   // Fetch user's uploads on component mount and when user logs in
   useEffect(() => {
     const fetchUserUploads = async () => {
@@ -93,6 +126,9 @@ export default function AgenticAIPage() {
     };
   }, []);
 
+  // ============================================================================
+  // LIFECYCLE HOOKS - Load Jira Credentials & Authentication
+  // ============================================================================
   // Load Jira credentials from localStorage
   useEffect(() => {
     const savedJiraCredentials = localStorage.getItem("jira_credentials");
@@ -156,6 +192,9 @@ export default function AgenticAIPage() {
     setRecentFn(updated);
   };
 
+  // ============================================================================
+  // EPIC GENERATION & MANAGEMENT
+  // ============================================================================
   // Generate Epics
   const handleGenerateEpics = async () => {
     if (!uploadId) {
@@ -279,6 +318,9 @@ export default function AgenticAIPage() {
     await fetchEpics(uploadId, false);
   };
 
+  // ============================================================================
+  // EPIC MANAGEMENT - Jira Retry & Creation
+  // ============================================================================
   // Retry creating a single epic in Jira
   const retryCreateEpicInJira = async (epic) => {
     console.log("Retry button clicked for epic:", epic.id, epic.name);
@@ -374,6 +416,9 @@ export default function AgenticAIPage() {
     }
   };
 
+  // ============================================================================
+  // STORY MANAGEMENT - Jira Retry & Creation
+  // ============================================================================
   // Retry creating a single story in Jira
   const retryCreateStoryInJira = async (story) => {
     console.log("Retry button clicked for story:", story.id, story.name);
@@ -684,6 +729,9 @@ export default function AgenticAIPage() {
     // fetchEpics will be called automatically via useEffect
   };
 
+  // ============================================================================
+  // STORY GENERATION & MANAGEMENT
+  // ============================================================================
   // Create Story in Jira
   const handleCreateStoryInJira = async (story, epicId) => {
     if (!jiraCredentials) {
@@ -830,6 +878,9 @@ export default function AgenticAIPage() {
     }
   };
 
+  // ============================================================================
+  // STORY FETCHING & AUTO-LOADING
+  // ============================================================================
   // Fetch stories for selected epic
   const fetchStories = async (epicId, shouldMerge = true) => {
     if (!epicId) return;
@@ -869,6 +920,9 @@ export default function AgenticAIPage() {
     }
   };
 
+  // ============================================================================
+  // STORY FETCHING & AUTO-LOADING
+  // ============================================================================
   // Auto-fetch stories when epicIdForStories changes
   useEffect(() => {
     if (epicIdForStories) {
@@ -1113,7 +1167,7 @@ export default function AgenticAIPage() {
       <div className="mb-8">
         <div className="flex items-center gap-3">
           <FaRobot className="text-4xl text-blue-600" />
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">🤖 Agentic AI</h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Agentic AI</h1>
         </div>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
           Use specialized agents to generate epics, stories, and QA tests from your requirements
@@ -1146,7 +1200,7 @@ export default function AgenticAIPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Generate Epics Card */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-purple-600 mb-4">📚 Generate Epics</h2>
+          <h2 className="text-2xl font-bold text-purple-600 mb-4">Generate Epics</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -1329,7 +1383,7 @@ export default function AgenticAIPage() {
 
         {/* Generate Test Plan Card */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-orange-600 mb-4">📋 Generate Test Plan</h2>
+          <h2 className="text-2xl font-bold text-orange-600 mb-4">Generate Test Plan</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -1464,7 +1518,7 @@ export default function AgenticAIPage() {
 
         {/* Generate Stories Card */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-green-600 mb-4">📖 Generate Stories</h2>
+          <h2 className="text-2xl font-bold text-green-600 mb-4">Generate Stories</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -1632,7 +1686,7 @@ export default function AgenticAIPage() {
 
         {/* Generate QA Card */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-blue-600 mb-4">✅ Generate QA Tests</h2>
+          <h2 className="text-2xl font-bold text-blue-600 mb-4">Generate QA Tests</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">

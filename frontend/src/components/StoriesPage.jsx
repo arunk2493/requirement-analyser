@@ -57,7 +57,7 @@ export default function StoriesPage() {
           <div className="flex items-center gap-3">
             <FaList className="text-4xl text-green-600" />
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-              📖 Stories
+              Stories
             </h1>
           </div>
           <button

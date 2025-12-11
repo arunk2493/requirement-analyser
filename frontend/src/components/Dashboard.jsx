@@ -30,7 +30,7 @@ export default function Dashboard() {
 
   const cards = [
     {
-      title: "📋 Uploads",
+      title: "Uploads",
       description: "Manage requirement files",
       icon: <FaFileAlt className="text-4xl" />,
       link: "/upload",
@@ -38,7 +38,7 @@ export default function Dashboard() {
       count: stats.uploads,
     },
     {
-      title: "🎯 Epics",
+      title: "Epics",
       description: "View all epics and their details",
       icon: <FaBook className="text-4xl" />,
       link: "/epics",
@@ -46,7 +46,7 @@ export default function Dashboard() {
       count: stats.epics,
     },
     {
-      title: "📖 Stories",
+      title: "Stories",
       description: "Browse user stories",
       icon: <FaList className="text-4xl" />,
       link: "/stories",
@@ -54,7 +54,7 @@ export default function Dashboard() {
       count: stats.stories,
     },
     {
-      title: "✅ Test Plans",
+      title: "Test Plans",
       description: "View test plans and scenarios",
       icon: <FaFlask className="text-4xl" />,
       link: "/testplans",
@@ -62,7 +62,7 @@ export default function Dashboard() {
       count: stats.testplans,
     },
     {
-      title: "🔌 Jira Integration",
+      title: "Jira Integration",
       description: "Connect and sync to Jira",
       icon: <FaJira className="text-4xl" />,
       link: "/jira-integration",

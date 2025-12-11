@@ -255,7 +255,7 @@ public class ${className}Test {
           <div className="flex items-center gap-3">
             <FaCheckSquare className="text-4xl text-blue-600" />
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-              ✅ QA Test Cases
+              QA Test Cases
             </h1>
           </div>
           <div className="flex items-center gap-2">

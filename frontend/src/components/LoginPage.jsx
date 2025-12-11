@@ -164,26 +164,7 @@ export default function LoginPage({ setIsAuthenticated, setUser }) {
               {loading ? "Please wait..." : isLogin ? "Login" : "Create Account"}
             </button>
           </form>
-
-          {/* Footer */}
-          <p className="text-center text-gray-500 text-sm mt-6">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError("");
-              }}
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              {isLogin ? "Register" : "Login"}
-            </button>
-          </p>
         </div>
-
-        {/* Info Text */}
-        <p className="text-center text-blue-100 text-xs mt-8">
-          Secure authentication with JWT tokens
-        </p>
       </div>
     </div>
   );

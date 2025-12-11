@@ -49,7 +49,7 @@ export default function EpicsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FaBook className="text-4xl text-purple-600" />
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">🎯 Epics</h1>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Epics</h1>
           </div>
           <button
             onClick={() => loadEpics(currentPage)}

@@ -78,7 +78,7 @@ export default function UploadPage() {
         <div className="flex items-center gap-3 mb-2">
           <FaFileUpload className="text-4xl text-blue-600" />
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-            📁 Upload Requirements
+            Upload Requirements
           </h1>
         </div>
         <p className="text-gray-600 dark:text-gray-400">
