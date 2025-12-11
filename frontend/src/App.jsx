@@ -7,7 +7,7 @@ import EpicsPage from "./components/EpicsPage";
 import StoriesPage from "./components/StoriesPage";
 import QAPage from "./components/QAPage";
 import TestPlansPage from "./components/TestPlansPage";
-import History from "./components/GenerateConfluence";
+import History from "./components/History";
 import AgenticAIPage from "./components/AgenticAIPage";
 import Dashboard from "./components/Dashboard";
 import SearchDocuments from "./components/SearchDocuments";

@@ -21,7 +21,7 @@ export default function Sidebar({ darkMode, setDarkMode, user, setIsAuthenticate
   const links = [
     { path: "/", label: "Dashboard", icon: <FaHome /> },
     { path: "/upload", label: "Upload", icon: <FaUpload /> },
-    { path: "/agentic-ai", label: "Agentic AI", icon: <FaRobot /> },
+    { path: "/agentic-ai", label: "Analyser Agents", icon: <FaRobot /> },
     { path: "/epics", label: "Epics", icon: <FaBook /> },
     { path: "/stories", label: "Stories", icon: <FaList /> },
     { path: "/qa", label: "QA", icon: <FaCheckSquare /> },

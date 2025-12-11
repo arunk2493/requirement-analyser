@@ -1,26 +1,30 @@
 import { useEffect, useState } from "react";
 import { fetchAllEpics } from "../api/api";
-import { FaBook, FaSpinner, FaExternalLinkAlt, FaSync, FaChevronLeft, FaChevronRight, FaSortUp, FaSortDown } from "react-icons/fa";
+import { FaBook, FaSpinner } from "react-icons/fa";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Button } from "primereact/button";
+import { InputText } from "primereact/inputtext";
+import { Paginator } from "primereact/paginator";
+import { Dropdown } from "primereact/dropdown";
 
 export default function EpicsPage() {
   const [epics, setEpics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [totalEpics, setTotalEpics] = useState(0);
-  const [sortBy, setSortBy] = useState("created_at");
-  const [sortOrder, setSortOrder] = useState("desc");
-  const pageSize = 10;
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [first, setFirst] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
-  const loadEpics = async (page = 1) => {
+  const loadEpics = async () => {
     try {
       setRefreshing(true);
-      const response = await fetchAllEpics(page, pageSize, sortBy, sortOrder);
+      const page = Math.floor(first / pageSize) + 1;
+      const response = await fetchAllEpics(page, pageSize);
       setEpics(response.data.epics || []);
       setTotalEpics(response.data.total_epics || 0);
-      setTotalPages(response.data.total_pages || 1);
       setError(null);
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to load epics");
@@ -34,13 +38,13 @@ export default function EpicsPage() {
     const initialLoad = async () => {
       try {
         setLoading(true);
-        await loadEpics(currentPage);
+        await loadEpics();
       } finally {
         setLoading(false);
       }
     };
     initialLoad();
-  }, [currentPage, sortBy, sortOrder]);
+  }, [first, pageSize]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
@@ -51,14 +55,16 @@ export default function EpicsPage() {
             <FaBook className="text-4xl text-purple-600" />
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Epics</h1>
           </div>
-          <button
-            onClick={() => loadEpics(currentPage)}
+          <Button
+            icon="pi pi-refresh"
+            label="Refresh"
+            onClick={() => loadEpics()}
             disabled={refreshing}
-            className="p-2 bg-purple-500 hover:bg-purple-600 disabled:bg-purple-400 text-white rounded-lg transition"
+            className="p-button-rounded p-button-text"
+            style={{ color: '#a855f7' }}
             title="Refresh epics"
-          >
-            <FaSync className={`text-2xl ${refreshing ? "animate-spin" : ""}`} />
-          </button>
+            loading={refreshing}
+          />
         </div>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
           View all epics with their detailed information and Confluence links
@@ -93,100 +99,114 @@ export default function EpicsPage() {
       {/* Table */}
       {!loading && epics.length > 0 && (
         <div className="space-y-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Total Epics: <span className="font-bold text-gray-900 dark:text-white">{totalEpics}</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              Total Epics: <span className="font-bold text-gray-900 dark:text-white">{totalEpics}</span>
+            </span>
+            <span className="p-input-icon-left">
+              <i className="pi pi-search" />
+              <InputText
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                placeholder="Search epics..."
+                className="w-full md:w-auto"
+              />
+            </span>
           </div>
 
-          <div className="overflow-x-auto rounded-lg shadow">
-            <table className="w-full border-collapse bg-white dark:bg-gray-800">
-              <thead>
-                <tr className="bg-purple-100 dark:bg-purple-900 border-b border-gray-300 dark:border-gray-700">
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                    <button className="flex items-center gap-2" onClick={() => {
-                      if (sortBy === 'id') {
-                        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-                      } else {
-                        setSortBy('id');
-                        setSortOrder('desc');
-                      }
-                      setCurrentPage(1);
-                    }}>
-                      ID
-                      {sortBy === 'id' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Epic Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                    <button className="flex items-center gap-2" onClick={() => {
-                      if (sortBy === 'created_at') {
-                        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-                      } else {
-                        setSortBy('created_at');
-                        setSortOrder('desc');
-                      }
-                      setCurrentPage(1);
-                    }}>
-                      Created
-                      {sortBy === 'created_at' ? (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />) : null}
-                    </button>
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Confluence</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Jira</th>
-                </tr>
-              </thead>
-              <tbody>
-                {epics.map((epic) => (
-                  <tr key={epic.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-purple-50 dark:hover:bg-gray-700 transition">
-                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-medium">{epic.id}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">{epic.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{new Date(epic.created_at).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-sm">
-                      {epic.confluence_page_url ? (
-                        <a href={epic.confluence_page_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-md transition">
-                          <FaExternalLinkAlt className="text-xs" />
-                          <span>View</span>
-                        </a>
-                      ) : (
-                        <span className="text-gray-400 dark:text-gray-500">N/A</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      {epic.jira_url ? (
-                        <a href={epic.jira_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition">
-                          <span className="inline-flex items-center gap-2"><FaExternalLinkAlt className="text-xs" /> {epic.jira_key || 'Open'}</span>
-                        </a>
-                      ) : (
-                        <span className="text-gray-400 dark:text-gray-500">N/A</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            value={epics}
+            globalFilter={globalFilter}
+            emptyMessage="No epics found"
+            className="p-datatable-striped p-datatable-sm"
+            responsiveLayout="scroll"
+            stripedRows
+            loading={refreshing}
+            dataKey="id"
+            scrollable
+            scrollHeight="600px"
+            style={{ borderRadius: '0.5rem' }}
+          >
+            <Column
+              field="id"
+              header="ID"
+              sortable
+              style={{ width: '80px' }}
+              bodyClassName="text-gray-900 dark:text-gray-100 font-medium"
+            />
+            <Column
+              field="name"
+              header="Epic Name"
+              style={{ width: '300px' }}
+              bodyClassName="text-gray-900 dark:text-gray-100"
+            />
+            <Column
+              field="created_at"
+              header="Created"
+              sortable
+              style={{ width: '150px' }}
+              body={(rowData) => new Date(rowData.created_at).toLocaleDateString()}
+              bodyClassName="text-gray-600 dark:text-gray-400"
+            />
+            <Column
+              header="Confluence"
+              style={{ width: '120px' }}
+              body={(rowData) => (
+                rowData.confluence_page_url ? (
+                  <Button
+                    onClick={() => window.open(rowData.confluence_page_url, '_blank')}
+                    label="View"
+                    icon="pi pi-external-link"
+                    className="p-button-sm p-button-rounded"
+                    style={{ backgroundColor: '#a855f7', borderColor: '#a855f7' }}
+                    title="View on Confluence"
+                  />
+                ) : (
+                  <span className="text-gray-400 text-sm">N/A</span>
+                )
+              )}
+            />
+            <Column
+              header="Jira"
+              style={{ width: '150px' }}
+              body={(rowData) => (
+                rowData.jira_url ? (
+                  <Button
+                    onClick={() => window.open(rowData.jira_url, '_blank')}
+                    label={rowData.jira_key || 'Open'}
+                    icon="pi pi-external-link"
+                    className="p-button-sm p-button-rounded"
+                    style={{ backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
+                    title="View on Jira"
+                  />
+                ) : (
+                  <span className="text-gray-400 text-sm">N/A</span>
+                )
+              )}
+            />
+          </DataTable>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                title="Previous page"
-              >
-                <FaChevronLeft className="text-sm text-gray-700 dark:text-gray-300" />
-              </button>
-
-              <span className="text-xs text-gray-600 dark:text-gray-400">Page {currentPage} of {totalPages}</span>
-
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                title="Next page"
-              >
-                <FaChevronRight className="text-sm text-gray-700 dark:text-gray-300" />
-              </button>
+          {totalEpics > pageSize && (
+            <div className="mt-6 flex items-center justify-center gap-4">
+              <Paginator
+                first={first}
+                rows={pageSize}
+                totalRecords={totalEpics}
+                onPageChange={(e) => {
+                  setFirst(e.first);
+                }}
+                template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
+              />
+              <Dropdown
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(e.value);
+                  setFirst(0);
+                }}
+                options={[5, 10, 20, 50]}
+                className="p-dropdown-compact"
+                style={{ width: '70px' }}
+              />
             </div>
           )}
         </div>

@@ -10,6 +10,7 @@ You are a QA automation engineer. Generate comprehensive test cases for the prov
 4. Generate automation scripts in Karate DSL format (Java-based BDD)
 5. Include validation steps that verify expected behavior
 6. Ensure test cases are independent and reusable
+7. Avoid adding duplicate test cases
 
 ## Output Format (STRICTLY VALID JSON ONLY):
 Respond ONLY with a valid JSON array. NO explanations, NO comments, NO text outside JSON.
