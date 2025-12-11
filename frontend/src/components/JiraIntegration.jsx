@@ -134,12 +134,12 @@ export default function JiraIntegration() {
 
         if (saveResponse.ok) {
           setConnectionStatus("success");
-          setMessage(`✓ Connected as ${data.user}. Credentials saved!`);
+          setMessage(`Connected as ${data.user}. Credentials saved!`);
           // Also save to localStorage for offline use
           localStorage.setItem("jira_credentials", JSON.stringify(formData));
         } else {
           setConnectionStatus("warning");
-          setMessage(`✓ Connected as ${data.user}. But failed to save to profile.`);
+          setMessage(`Connected as ${data.user}. But failed to save to profile.`);
         }
       } else {
         setConnectionStatus("error");
@@ -221,7 +221,7 @@ export default function JiraIntegration() {
               {connectionStatus === "success" && (
                 <div className="mb-6 p-4 bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-700 rounded-lg flex items-center justify-between">
                   <p className="text-green-900 dark:text-green-200">
-                    <strong>✓ Connected:</strong> {formData.jira_url} ({formData.jira_project_key})
+                    <strong>Connected:</strong> {formData.jira_url} ({formData.jira_project_key})
                   </p>
                   <button
                     onClick={handleClearCredentials}

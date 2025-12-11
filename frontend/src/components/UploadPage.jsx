@@ -1,11 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api } from "../api/api";
-import { FaFileUpload, FaCheckCircle, FaExclamationCircle, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaFileUpload, FaCheckCircle, FaTimesCircle, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { Toast } from "primereact/toast";
 
 export default function UploadPage() {
+  // =================================================================
+  // Toast Notification Reference
+  // =================================================================
+  const toast = useRef(null);
+
+  // =================================================================
+  // State Management
+  // =================================================================
   const [file, setFile] = useState(null);
-  const [message, setMessage] = useState("");
-  const [status, setStatus] = useState(null); // "success" or "error"
+  // Removed: message and status states - now using Toast instead
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploads, setUploads] = useState([]);
@@ -41,8 +49,12 @@ export default function UploadPage() {
 
   const handleUpload = async () => {
     if (!file) {
-      setMessage("Please select a file first");
-      setStatus("error");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Please select a file first",
+        life: 2000,
+      });
       return;
     }
 
@@ -57,14 +69,22 @@ export default function UploadPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setUploadProgress(75);
-      setMessage(`✅ Upload successful! File ID: ${response.data.upload_id}`);
-      setStatus("success");
+      toast.current.show({
+        severity: "success",
+        summary: "Success",
+        detail: `✅ Upload successful! File ID: ${response.data.upload_id}`,
+        life: 2000,
+      });
       setFile(null);
       setCurrentPage(1); // Reset to first page
       loadUploads(); // Refresh the list
     } catch (err) {
-      setMessage("❌ Upload failed: " + (err.response?.data?.detail || err.message));
-      setStatus("error");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "❌ Upload failed: " + (err.response?.data?.detail || err.message),
+        life: 2000,
+      });
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -73,6 +93,24 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
+      {/* Toast Notifications */}
+      <Toast 
+        ref={toast} 
+        position="top-center"
+        itemTemplate={(item) => (
+          <div className="flex items-center gap-3 w-full">
+            <div className="flex-shrink-0 text-lg">
+              {item.severity === "success" && <FaCheckCircle />}
+              {item.severity === "error" && <FaTimesCircle />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm">{item.summary}</p>
+              <p className="text-sm opacity-95">{item.detail}</p>
+            </div>
+          </div>
+        )}
+      />
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -107,7 +145,6 @@ export default function UploadPage() {
                   type="file"
                   onChange={(e) => {
                     setFile(e.target.files[0]);
-                    setMessage("");
                   }}
                   className="hidden"
                   accept=".pdf,.txt,.docx"
@@ -150,32 +187,6 @@ export default function UploadPage() {
                   className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
-              </div>
-            )}
-
-            {/* Message Display */}
-            {message && (
-              <div
-                className={`mt-6 p-4 rounded-lg flex items-start gap-3 ${
-                  status === "success"
-                    ? "bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-700"
-                    : "bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700"
-                }`}
-              >
-                {status === "success" ? (
-                  <FaCheckCircle className="text-2xl text-green-600 dark:text-green-400 flex-shrink-0 mt-1" />
-                ) : (
-                  <FaExclamationCircle className="text-2xl text-red-600 dark:text-red-400 flex-shrink-0 mt-1" />
-                )}
-                <p
-                  className={`text-sm ${
-                    status === "success"
-                      ? "text-green-700 dark:text-green-300"
-                      : "text-red-700 dark:text-red-300"
-                  }`}
-                >
-                  {message}
-                </p>
               </div>
             )}
           </div>

@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { generateEpicsAgent, generateStoriesAgent, generateQAAgent, generateTestPlanAgent, ragSearch, ragVectorStoreSearch, fetchUploads, getEpicsAgent, getStoriesAgent, getQAAgent, getTestPlanAgent } from "../api/api";
-import { FaRobot, FaSpinner, FaExternalLinkAlt, FaSync, FaCheckCircle, FaExclamationCircle, FaArrowRight, FaJira } from "react-icons/fa";
+import { FaRobot, FaSpinner, FaExternalLinkAlt, FaSync, FaCheckCircle, FaTimesCircle, FaArrowRight, FaJira } from "react-icons/fa";
+import { Toast } from "primereact/toast";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -19,6 +20,11 @@ const API_BASE_URL = "http://localhost:8000";
  * - Error handling and retry mechanisms
  */
 export default function AgenticAIPage() {
+  // ============================================================================
+  // Toast Reference for Notifications
+  // ============================================================================
+  const toast = useRef(null);
+
   // ============================================================================
   // STATE MANAGEMENT - Selection State
   // ============================================================================
@@ -69,8 +75,7 @@ export default function AgenticAIPage() {
   // ============================================================================
   // STATE MANAGEMENT - Messaging
   // ============================================================================
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  // Removed: successMessage and errorMessage states - now using Toast instead
 
   // ============================================================================
   // STATE MANAGEMENT - Jira Integration
@@ -164,19 +169,33 @@ export default function AgenticAIPage() {
 
   const showMessage = (type, message) => {
     if (type === "success") {
-      setSuccessMessage(message);
-      setErrorMessage("");
-      // Auto-clear success messages after 4 seconds
-      setTimeout(() => setSuccessMessage(""), 4000);
+      toast.current.show({
+        severity: "success",
+        summary: "Success",
+        detail: message,
+        life: 2000,
+      });
+    } else if (type === "error") {
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: message,
+        life: 2000,
+      });
     } else {
-      // Keep error messages visible until user dismisses
-      setErrorMessage(message);
-      setSuccessMessage("");
+      // warning
+      toast.current.show({
+        severity: "warn",
+        summary: "Warning",
+        detail: message,
+        life: 2000,
+      });
     }
   };
 
   const dismissError = () => {
-    setErrorMessage("");
+    // Toast automatically dismisses, no need for manual dismiss
+    return;
   };
 
   // Helper function to add item to recent list (keep only last 5, sorted by most recent first)
@@ -329,7 +348,7 @@ export default function AgenticAIPage() {
     const savedJiraCredentials = localStorage.getItem("jira_credentials");
     if (!savedJiraCredentials) {
       console.error("No Jira credentials found");
-      const errorMsg = "❌ Jira credentials not configured. Please configure Jira integration first.";
+      const errorMsg = "Jira credentials not configured. Please configure Jira integration first.";
       showMessage("error", errorMsg);
       return;
     }
@@ -340,14 +359,14 @@ export default function AgenticAIPage() {
       console.log("Parsed Jira credentials");
     } catch (e) {
       console.error("Failed to parse credentials:", e);
-      const errorMsg = "❌ Invalid Jira credentials. Please reconfigure Jira integration.";
+      const errorMsg = "Invalid Jira credentials. Please reconfigure Jira integration.";
       showMessage("error", errorMsg);
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      const errorMsg = "❌ Not authenticated. Please login first.";
+      const errorMsg = "Not authenticated. Please login first.";
       showMessage("error", errorMsg);
       return;
     }
@@ -387,7 +406,7 @@ export default function AgenticAIPage() {
           ...prev,
           [`epic_${epic.id}`]: { key: data.key, url: data.url }
         }));
-        const successMsg = `✅ Epic "${epic.name}" created in Jira successfully!`;
+        const successMsg = `Epic "${epic.name}" created in Jira successfully!`;
         showMessage("success", successMsg);
         console.log(successMsg);
         
@@ -399,12 +418,12 @@ export default function AgenticAIPage() {
         }
       } else {
         console.error(`Failed to create epic ${epic.name}:`, data);
-        const errorMsg = `❌ Failed to create epic: ${data.detail || data.errors?.description || "Unknown error"}`;
+        const errorMsg = `Failed to create epic: ${data.detail || data.errors?.description || "Unknown error"}`;
         showMessage("error", errorMsg);
       }
     } catch (err) {
       console.error(`Failed to retry epic creation for ${epic.name}:`, err);
-      const errorMsg = `❌ Error: ${err.message || "Failed to create epic. Please try again."}`;
+      const errorMsg = `Error: ${err.message || "Failed to create epic. Please try again."}`;
       showMessage("error", errorMsg);
     } finally {
       console.log("Clearing loading state for epic:", epic.id);
@@ -428,7 +447,7 @@ export default function AgenticAIPage() {
     const savedJiraCredentials = localStorage.getItem("jira_credentials");
     if (!savedJiraCredentials) {
       console.error("No Jira credentials found");
-      const errorMsg = "❌ Jira credentials not configured. Please configure Jira integration first.";
+      const errorMsg = "Jira credentials not configured. Please configure Jira integration first.";
       showMessage("error", errorMsg);
       return;
     }
@@ -439,14 +458,14 @@ export default function AgenticAIPage() {
       console.log("Parsed Jira credentials");
     } catch (e) {
       console.error("Failed to parse credentials:", e);
-      const errorMsg = "❌ Invalid Jira credentials. Please reconfigure Jira integration.";
+      const errorMsg = "Invalid Jira credentials. Please reconfigure Jira integration.";
       showMessage("error", errorMsg);
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      const errorMsg = "❌ Not authenticated. Please login first.";
+      const errorMsg = "Not authenticated. Please login first.";
       showMessage("error", errorMsg);
       return;
     }
@@ -467,13 +486,13 @@ export default function AgenticAIPage() {
       console.log("Parent epic found:", parentEpic);
       
       if (!parentEpic) {
-        const errorMsg = "❌ Parent epic not found. Please refresh the page and try again.";
+        const errorMsg = "Parent epic not found. Please refresh the page and try again.";
         showMessage("error", errorMsg);
         return;
       }
       
       if (!parentEpic.jira_issue_id) {
-        const errorMsg = "❌ Parent epic not created in Jira. Please create the epic first.";
+        const errorMsg = "Parent epic not created in Jira. Please create the epic first.";
         showMessage("error", errorMsg);
         return;
       }
@@ -514,7 +533,7 @@ export default function AgenticAIPage() {
           ...prev,
           [`story_${story.id}`]: { key: data.key, url: data.url }
         }));
-        const successMsg = `✅ Story "${story.name}" created in Jira successfully!`;
+        const successMsg = `Story "${story.name}" created in Jira successfully!`;
         showMessage("success", successMsg);
         console.log(successMsg);
         
@@ -526,12 +545,12 @@ export default function AgenticAIPage() {
         }
       } else {
         console.error(`Failed to create story ${story.name}:`, data);
-        const errorMsg = `❌ Failed to create story: ${data.detail || data.errors?.description || "Unknown error"}`;
+        const errorMsg = `Failed to create story: ${data.detail || data.errors?.description || "Unknown error"}`;
         showMessage("error", errorMsg);
       }
     } catch (err) {
       console.error(`Failed to retry story creation for ${story.name}:`, err);
-      const errorMsg = `❌ Error: ${err.message || "Failed to create story. Please try again."}`;
+      const errorMsg = `Error: ${err.message || "Failed to create story. Please try again."}`;
       showMessage("error", errorMsg);
     } finally {
       console.log("Clearing loading state for story:", story.id);
@@ -597,10 +616,10 @@ export default function AgenticAIPage() {
 
     // Show summary message
     if (successCount > 0) {
-      showMessage("success", `✅ ${successCount} story/stories created as subtasks in Jira`);
+      showMessage("success", `${successCount} story/stories created as subtasks in Jira`);
     }
     if (failureCount > 0) {
-      showMessage("warning", `⚠️ ${failureCount} story/stories failed to create in Jira`);
+      showMessage("warning", `${failureCount} story/stories failed to create in Jira`);
     }
 
     // Refresh stories to get persisted Jira data
@@ -638,7 +657,7 @@ export default function AgenticAIPage() {
       const data = await response.json();
 
       if (response.ok) {
-        showMessage("success", `✅ Epic created in Jira: ${data.key}. View link in EPIC page.`);
+        showMessage("success", `Epic created in Jira: ${data.key}. View link in EPIC page.`);
         setJiraResults(prev => ({
           ...prev,
           [itemKey]: { key: data.key, url: data.url }
@@ -777,7 +796,7 @@ export default function AgenticAIPage() {
       const data = await response.json();
 
       if (response.ok) {
-        showMessage("success", `✅ Story created in Jira: ${data.key}. View link in STORY page.`);
+        showMessage("success", `Story created in Jira: ${data.key}. View link in STORY page.`);
         setJiraResults(prev => ({
           ...prev,
           [itemKey]: { key: data.key, url: data.url }
@@ -817,7 +836,7 @@ export default function AgenticAIPage() {
       setGeneratedStories(stories);
       setStoryProgress(75);
       
-      showMessage("success", "✅ Stories generated successfully!");
+      showMessage("success", "Stories generated successfully!");
       
       // Auto-create stories in Jira if credentials are configured
       if (jiraCredentials) {
@@ -826,7 +845,7 @@ export default function AgenticAIPage() {
         if (epic && epic.jira_issue_id) {
           await createStoriesInJira(stories, epicIdForStories, epic);
         } else {
-          showMessage("warning", "⚠️ Parent epic not created in Jira. Stories marked as failed. Set up the epic in Jira first to link stories.");
+          showMessage("warning", "Parent epic not created in Jira. Stories marked as failed. Set up the epic in Jira first to link stories.");
           // Mark all stories as failed
           const token = localStorage.getItem("token");
           for (const story of stories) {
@@ -847,7 +866,7 @@ export default function AgenticAIPage() {
           }
         }
       } else {
-        showMessage("warning", "⚠️ Jira credentials not configured. Stories marked as failed. Set up Jira integration to create stories.");
+        showMessage("warning", "Jira credentials not configured. Stories marked as failed. Set up Jira integration to create stories.");
         // Mark all stories as failed
         const token = localStorage.getItem("token");
         for (const story of stories) {
@@ -973,7 +992,7 @@ export default function AgenticAIPage() {
       
       setQAProgress(75);
       
-      showMessage("success", "✅ QA tests generated successfully!");
+      showMessage("success", "QA tests generated successfully!");
       // Refresh the QA list
       await fetchQA(storyId);
     } catch (e) {
@@ -1082,7 +1101,7 @@ export default function AgenticAIPage() {
       setGeneratedTestPlans(testPlans);
       setTestPlanProgress(75);
       
-      showMessage("success", "✅ Test plan generated successfully!");
+      showMessage("success", "Test plan generated successfully!");
       // Refresh the test plans list
       await fetchTestPlans(epicIdForTestPlan);
     } catch (e) {
@@ -1153,7 +1172,7 @@ export default function AgenticAIPage() {
       setLoadingRAG(true);
       const res = await ragVectorStoreSearch(ragQuery, 5);
       setRagResults(res.data.search_results || []);
-      showMessage("success", `✅ Found ${(res.data.search_results || []).length} documents!`);
+      showMessage("success", `Found ${(res.data.search_results || []).length} documents!`);
     } catch (e) {
       showMessage("error", e.response?.data?.detail || "Failed to search documents");
     } finally {
@@ -1163,6 +1182,24 @@ export default function AgenticAIPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
+      {/* Toast Notifications */}
+      <Toast 
+        ref={toast} 
+        position="top-center"
+        itemTemplate={(item) => (
+          <div className="flex items-center gap-3 w-full">
+            <div className="flex-shrink-0 text-lg">
+              {item.severity === "success" && <FaCheckCircle />}
+              {item.severity === "error" && <FaTimesCircle />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm">{item.summary}</p>
+              <p className="text-sm opacity-95">{item.detail}</p>
+            </div>
+          </div>
+        )}
+      />
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3">
@@ -1173,29 +1210,6 @@ export default function AgenticAIPage() {
           Use specialized agents to generate epics, stories, and QA tests from your requirements
         </p>
       </div>
-
-      {/* Messages */}
-      {successMessage && (
-        <div className="mb-6 p-4 bg-green-50 dark:bg-green-900 border-l-4 border-green-500 rounded-lg">
-          <p className="text-green-700 dark:text-green-100 flex items-center gap-2">
-            <FaCheckCircle /> {successMessage}
-          </p>
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900 border-l-4 border-red-500 rounded-lg flex items-center justify-between">
-          <p className="text-red-700 dark:text-red-100 flex items-center gap-2">
-            <FaExclamationCircle /> {errorMessage}
-          </p>
-          <button
-            onClick={dismissError}
-            className="text-red-700 dark:text-red-100 hover:text-red-900 dark:hover:text-red-50 font-bold text-xl"
-          >
-            ×
-          </button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Generate Epics Card */}
@@ -1356,7 +1370,7 @@ export default function AgenticAIPage() {
                                     className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs whitespace-nowrap transition hover:cursor-pointer"
                                     title="Click to retry creating this epic in Jira"
                                   >
-                                    <FaExclamationCircle /> Failed
+                                    <FaTimesCircle /> Failed
                                   </button>
                                   <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white rounded text-xs whitespace-nowrap z-10 pointer-events-none">
                                     Click to retry
@@ -1660,7 +1674,7 @@ export default function AgenticAIPage() {
                                     className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs whitespace-nowrap transition hover:cursor-pointer"
                                     title="Click to retry creating this story in Jira"
                                   >
-                                    <FaExclamationCircle /> Failed
+                                    <FaTimesCircle /> Failed
                                   </button>
                                   <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white rounded text-xs whitespace-nowrap z-10 pointer-events-none">
                                     Click to retry

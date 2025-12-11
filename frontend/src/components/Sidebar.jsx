@@ -12,8 +12,6 @@ import {
   FaSignOutAlt,
   FaUserCircle,
   FaSearch,
-  FaChevronLeft,
-  FaChevronRight,
   FaJira,
 } from "react-icons/fa";
 

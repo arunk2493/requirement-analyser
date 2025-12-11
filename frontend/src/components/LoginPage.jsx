@@ -1,19 +1,20 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import axios from "axios";
+import { Toast } from "primereact/toast";
+import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 
 const API_BASE = "http://localhost:8000";
 
 export default function LoginPage({ setIsAuthenticated, setUser }) {
+  const toast = useRef(null);
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
 
     try {
@@ -34,9 +35,17 @@ export default function LoginPage({ setIsAuthenticated, setUser }) {
           localStorage.setItem("name", name);
         }
 
-        // Update auth state - this will trigger App.jsx to re-render
-        setIsAuthenticated(true);
-        setUser({ name: name || email.split("@")[0], email });
+        // Show success message
+      toast.current.show({
+        severity: "success",
+        summary: "Success",
+        detail: `${isLogin ? "Login" : "Registration"} successful! Redirecting...`,
+        life: 2000,
+      });        // Update auth state - this will trigger App.jsx to re-render
+        setTimeout(() => {
+          setIsAuthenticated(true);
+          setUser({ name: name || email.split("@")[0], email });
+        }, 1000);
       }
     } catch (err) {
       const errorMessage = err.response?.data?.detail || 
@@ -50,7 +59,12 @@ export default function LoginPage({ setIsAuthenticated, setUser }) {
         fullError: err
       });
       
-      setError(errorMessage);
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: errorMessage,
+        life: 2000,
+      });
     } finally {
       setLoading(false);
     }
@@ -58,6 +72,23 @@ export default function LoginPage({ setIsAuthenticated, setUser }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center p-4">
+      <Toast 
+        ref={toast} 
+        position="top-center"
+        itemTemplate={(item) => (
+          <div className="flex items-center gap-3 w-full">
+            <div className="flex-shrink-0 text-lg">
+              {item.severity === "success" && <FaCheckCircle />}
+              {item.severity === "error" && <FaTimesCircle />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm">{item.summary}</p>
+              <p className="text-sm opacity-95">{item.detail}</p>
+            </div>
+          </div>
+        )}
+      />
+      
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
@@ -98,13 +129,6 @@ export default function LoginPage({ setIsAuthenticated, setUser }) {
               Register
             </button>
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 text-sm">{error}</p>
-            </div>
-          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
