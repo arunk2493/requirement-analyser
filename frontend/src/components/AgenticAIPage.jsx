@@ -1295,7 +1295,7 @@ export default function AgenticAIPage() {
                   optionGroupChildren="items"
                   placeholder="-- Choose an upload --"
                   className="w-full text-base"
-                  panelClassName="dark:bg-gray-700 dark:text-white"
+                  panelClassName="dark:bg-gray-700 dark:text-white max-h-96 overflow-y-auto"
                   showClear
                 />
               )}
@@ -1475,7 +1475,7 @@ export default function AgenticAIPage() {
                 optionGroupChildren="items"
                 placeholder="-- Choose an epic --"
                 className="w-full text-base"
-                panelClassName="dark:bg-gray-700 dark:text-white"
+                panelClassName="dark:bg-gray-700 dark:text-white max-h-96 overflow-y-auto"
                 showClear
               />
               {generatedEpics.length === 0 && uploadId && (
@@ -1554,24 +1554,6 @@ export default function AgenticAIPage() {
                     style={{ width: '250px' }}
                     body={(rowData) => rowData.name || "Untitled"}
                     bodyClassName="text-gray-900 dark:text-gray-100"
-                  />
-                  <Column
-                    header="Confluence"
-                    style={{ width: '130px' }}
-                    body={(rowData) => (
-                      rowData.confluence_page_url ? (
-                        <Button
-                          onClick={() => window.open(rowData.confluence_page_url, '_blank')}
-                          label="View"
-                          icon="pi pi-external-link"
-                          className="p-button-sm p-button-rounded"
-                          style={{ backgroundColor: '#22c55e', borderColor: '#22c55e' }}
-                          title="View on Confluence"
-                        />
-                      ) : (
-                        <span className="text-gray-400 text-sm">N/A</span>
-                      )
-                    )}
                   />
                   <Column
                     header="Jira Link"
@@ -1675,7 +1657,7 @@ export default function AgenticAIPage() {
                 optionGroupChildren="items"
                 placeholder="-- Choose a story --"
                 className="w-full text-base"
-                panelClassName="dark:bg-gray-700 dark:text-white"
+                panelClassName="dark:bg-gray-700 dark:text-white max-h-96 overflow-y-auto"
                 showClear
               />
               {generatedStories.length === 0 && epicIdForStories && (
@@ -1852,7 +1834,7 @@ export default function AgenticAIPage() {
                 optionGroupChildren="items"
                 placeholder="-- Choose an epic --"
                 className="w-full text-base"
-                panelClassName="dark:bg-gray-700 dark:text-white"
+                panelClassName="dark:bg-gray-700 dark:text-white max-h-96 overflow-y-auto"
                 showClear
               />
               {generatedEpics.length === 0 && uploadId && (

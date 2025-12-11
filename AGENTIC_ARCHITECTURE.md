@@ -46,7 +46,7 @@ The system has been converted to an **agentic AI architecture** where specialize
 │   ├── QAPage.jsx
 │   ├── TestPlansPage.jsx
 │   ├── Dashboard.jsx
-│   ├── GenerateConfluence.jsx
+│   ├── History.jsx          # History page showing recent content
 │   └── Sidebar.jsx          # Updated with agentic AI link
 
 ├── api/
