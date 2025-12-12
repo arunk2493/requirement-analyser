@@ -172,7 +172,7 @@ app.include_router(getTestPlan.router, prefix="/api", tags=["Content Retrieval"]
 app.include_router(agents_router.router, prefix="/api", tags=["Agents"])
 app.include_router(rag_search.router, prefix="/api", tags=["RAG Search"])
 app.include_router(rag_vectorstore_search.router, prefix="/api", tags=["RAG Search"])
-app.include_router(jira.router, prefix="/api", tags=["Jira Integration"])
+app.include_router(jira.router, tags=["Jira Integration"])
 
 logger.info("All routers registered successfully")
 

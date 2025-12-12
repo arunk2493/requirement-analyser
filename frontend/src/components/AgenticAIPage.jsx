@@ -1232,18 +1232,16 @@ export default function AgenticAIPage() {
       />
 
       {/* Header */}
-      <div className="mb-20 px-8 py-12 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-3xl border border-blue-100 dark:border-gray-600 shadow-xl">
-        <div className="flex items-center gap-8">
-          <div className="p-5 bg-blue-100 dark:bg-blue-900 rounded-xl flex-shrink-0 shadow-md">
-            <FaRobot className="text-5xl text-blue-600 dark:text-blue-300" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-6xl font-bold text-gray-900 dark:text-white mb-4">Requirment Analyser Agents</h1>
-            <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed font-medium">
-              Use specialized agents to generate epics, stories, and QA tests from your requirements
-            </p>
-          </div>
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <FaRobot className="text-4xl text-blue-600" />
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+            Requirement Analyser Agents
+          </h1>
         </div>
+        <p className="text-gray-600 dark:text-gray-400">
+          Use specialized agents to generate epics, stories, and QA tests from your requirements
+        </p>
       </div>
 
       {/* Accordion for Agent Sections */}
@@ -1300,16 +1298,14 @@ export default function AgenticAIPage() {
                 />
               )}
             </div>
-            <div className="relative group mt-6">
+            <div className="relative group mt-8">
               <Button
                 onClick={handleGenerateEpics}
                 disabled={loadingEpics || !uploadId || generatedEpics.length > 0}
                 severity="success"
                 className="w-full py-4 text-base font-semibold"
                 style={{ backgroundColor: '#a855f7', borderColor: '#a855f7' }}
-                icon={loadingEpics ? undefined : "pi pi-arrow-right"}
-                loading={loadingEpics}
-                label={loadingEpics ? `Generating... ${epicProgress}%` : "Generate Epics"}
+                label={loadingEpics ? ` Generating... ${epicProgress}%` : " Generate Epics"}
               />
               {epicProgress > 0 && loadingEpics && (
                 <div className="mt-4 w-full bg-gray-300 dark:bg-gray-600 rounded-full h-3">
@@ -1489,16 +1485,14 @@ export default function AgenticAIPage() {
                 </p>
               )}
             </div>
-            <div className="relative group mt-6">
+            <div className="relative group mt-8">
               <Button
                 onClick={handleGenerateStories}
                 disabled={loadingStories || !epicIdForStories || generatedStories.length > 0}
                 severity="success"
                 className="w-full py-4 text-base font-semibold"
                 style={{ backgroundColor: '#22c55e', borderColor: '#22c55e' }}
-                icon={loadingStories ? undefined : "pi pi-arrow-right"}
-                loading={loadingStories}
-                label={loadingStories ? `Generating... ${storyProgress}%` : "Generate Stories"}
+                label={loadingStories ? ` Generating... ${storyProgress}%` : " Generate Stories"}
               />
               {storyProgress > 0 && loadingStories && (
                 <div className="mt-4 w-full bg-gray-300 dark:bg-gray-600 rounded-full h-3">
@@ -1678,9 +1672,7 @@ export default function AgenticAIPage() {
                 severity="success"
                 className="w-full py-4 text-base font-semibold"
                 style={{ backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
-                icon={loadingQA ? undefined : "pi pi-arrow-right"}
-                loading={loadingQA}
-                label={loadingQA ? `Generating... ${qaProgress}%` : generatedQA.length > 0 ? "Regenerate QA Tests" : "Generate QA Tests"}
+                label={loadingQA ? ` Generating... ${qaProgress}%` : generatedQA.length > 0 ? " Regenerate QA Tests" : " Generate QA Tests"}
               />
               {qaProgress > 0 && loadingQA && (
                 <div className="mt-4 w-full bg-gray-300 dark:bg-gray-600 rounded-full h-3">
@@ -1805,7 +1797,7 @@ export default function AgenticAIPage() {
         </AccordionTab>
 
         {/* Generate Test Plans Tab */}
-        <AccordionTab header="Generate Test Plans" headerClassName="bg-orange-100 dark:bg-orange-900 text-orange-900 dark:text-orange-100 font-bold py-6 text-xl border-2 border-orange-300 dark:border-orange-700 rounded-lg transition hover:bg-orange-200 dark:hover:bg-orange-800 hover:shadow-md mb-6">
+        <AccordionTab header="Generate Test Plan" headerClassName="bg-orange-100 dark:bg-orange-900 text-orange-900 dark:text-orange-100 font-bold py-6 text-xl border-2 border-orange-300 dark:border-orange-700 rounded-lg transition hover:bg-orange-200 dark:hover:bg-orange-800 hover:shadow-md mb-6">
           <div className="space-y-10 pt-8 pb-8">
             <div>
               <label className="block text-lg font-bold text-gray-800 dark:text-gray-200 mb-5">
@@ -1855,9 +1847,7 @@ export default function AgenticAIPage() {
                 severity="success"
                 className="w-full py-4 text-base font-semibold"
                 style={{ backgroundColor: '#f97316', borderColor: '#f97316' }}
-                icon={loadingTestPlan ? undefined : "pi pi-arrow-right"}
-                loading={loadingTestPlan}
-                label={loadingTestPlan ? `Generating... ${testPlanProgress}%` : "Generate Test Plan"}
+                label={loadingTestPlan ? ` Generating... ${testPlanProgress}%` : " Generate Test Plan"}
               />
               {testPlanProgress > 0 && loadingTestPlan && (
                 <div className="mt-4 w-full bg-gray-300 dark:bg-gray-600 rounded-full h-3">
