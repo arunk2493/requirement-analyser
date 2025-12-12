@@ -1,8 +1,6 @@
 name: Run Unit Tests and Coverage
 
 on:
-  push:
-    branches: [ '**' ]
   pull_request:
     types: [ opened, synchronize, edited, labeled ]
     branches: [ '**' ]
