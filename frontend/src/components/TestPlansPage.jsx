@@ -46,6 +46,18 @@ export default function TestPlansPage() {
     initialLoad();
   }, [first, pageSize]);
 
+  // Custom global filter function for ID and test plan name columns
+  const filteredTestPlans = testplans.filter((plan) => {
+    if (!globalFilter.trim()) {
+      return true;
+    }
+    const filterValue = globalFilter.toLowerCase();
+    const planId = String(plan.id).toLowerCase();
+    const planTitle = (plan.title || "").toLowerCase();
+    
+    return planId.includes(filterValue) || planTitle.includes(filterValue);
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
       {/* Header */}
@@ -123,8 +135,7 @@ export default function TestPlansPage() {
           </div>
 
           <DataTable
-            value={testplans}
-            globalFilter={globalFilter}
+            value={filteredTestPlans}
             emptyMessage="No test plans found"
             className="p-datatable-striped p-datatable-sm"
             responsiveLayout="scroll"
@@ -140,12 +151,14 @@ export default function TestPlansPage() {
               header="ID"
               sortable
               style={{ width: '80px' }}
+              headerClassName="font-bold bg-orange-500 text-white dark:bg-orange-600"
               bodyClassName="text-gray-900 dark:text-gray-100 font-medium"
             />
             <Column
               field="title"
               header="Title"
               style={{ width: '300px' }}
+              headerClassName="font-bold bg-orange-500 text-white dark:bg-orange-600"
               body={(rowData) => rowData.title || (rowData.content?.title ?? (typeof rowData.content === 'string' ? rowData.content.substring(0, 50) : JSON.stringify(rowData.content).substring(0, 50)))}
               bodyClassName="text-gray-900 dark:text-gray-100"
             />
@@ -154,12 +167,14 @@ export default function TestPlansPage() {
               header="Created"
               sortable
               style={{ width: '150px' }}
+              headerClassName="font-bold bg-orange-500 text-white dark:bg-orange-600"
               body={(rowData) => new Date(rowData.created_at).toLocaleDateString()}
               bodyClassName="text-gray-600 dark:text-gray-400"
             />
             <Column
               header="Confluence"
               style={{ width: '150px' }}
+              headerClassName="font-bold bg-orange-500 text-white dark:bg-orange-600"
               body={(rowData) => (
                 rowData.confluence_page_url ? (
                   <Button

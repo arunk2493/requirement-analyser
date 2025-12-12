@@ -248,6 +248,18 @@ public class ${className}Test {
     return JSON.stringify(qa.content).substring(0, 100);
   };
 
+  // Custom global filter function for ID and test case title columns
+  const filteredQA = qa.filter((test) => {
+    if (!globalFilter.trim()) {
+      return true;
+    }
+    const filterValue = globalFilter.toLowerCase();
+    const testId = String(test.id).toLowerCase();
+    const testTitle = (getTestTitle(test) || "").toLowerCase();
+    
+    return testId.includes(filterValue) || testTitle.includes(filterValue);
+  });
+
   const downloadAsCSV = () => {
     // Get data to download - either filtered or all
     const dataToDownload = allQA.filter(test => {
@@ -397,8 +409,12 @@ public class ${className}Test {
                 icon="pi pi-filter"
                 label={showFilterPanel ? "Hide Filters" : "Show Filters"}
                 onClick={() => setShowFilterPanel(!showFilterPanel)}
-                className="p-button-outlined"
-                style={{ borderColor: '#3b82f6', color: '#3b82f6' }}
+                className="p-button-rounded p-button-sm"
+                style={{ 
+                  backgroundColor: '#3b82f6', 
+                  borderColor: '#3b82f6',
+                  color: '#ffffff'
+                }}
               />
             </div>
           </div>
@@ -564,8 +580,7 @@ public class ${className}Test {
 
           <div className="overflow-x-auto rounded-lg shadow">
             <DataTable
-              value={qa}
-              globalFilter={globalFilter}
+              value={filteredQA}
               emptyMessage="No QA test cases found"
               className="p-datatable-striped p-datatable-sm"
               responsiveLayout="scroll"
@@ -581,23 +596,27 @@ public class ${className}Test {
                 header="ID"
                 sortable
                 style={{ width: '80px' }}
+                headerClassName="font-bold bg-blue-500 text-white dark:bg-blue-600"
                 bodyClassName="text-gray-900 dark:text-gray-100 font-medium"
               />
               <Column
                 field="title"
                 header="Test Case Title"
                 style={{ width: '300px' }}
+                headerClassName="font-bold bg-blue-500 text-white dark:bg-blue-600"
                 body={(rowData) => getTestTitle(rowData)}
                 bodyClassName="text-gray-900 dark:text-gray-100"
               />
               <Column
                 header="Test Type"
                 style={{ width: '150px' }}
+                headerClassName="font-bold bg-blue-500 text-white dark:bg-blue-600"
                 body={testTypeBodyTemplate}
               />
               <Column
                 header="Description"
                 style={{ width: '250px' }}
+                headerClassName="font-bold bg-blue-500 text-white dark:bg-blue-600"
                 body={descriptionBodyTemplate}
                 bodyClassName="text-gray-600 dark:text-gray-400 line-clamp-2"
               />
@@ -606,12 +625,14 @@ public class ${className}Test {
                 header="Created"
                 sortable
                 style={{ width: '150px' }}
+                headerClassName="font-bold bg-blue-500 text-white dark:bg-blue-600"
                 body={createdAtBodyTemplate}
                 bodyClassName="text-gray-600 dark:text-gray-400"
               />
               <Column
                 header="Automation Scripts"
                 style={{ width: '200px' }}
+                headerClassName="font-bold bg-blue-500 text-white dark:bg-blue-600"
                 body={automationScriptsBodyTemplate}
               />
             </DataTable>

@@ -46,6 +46,18 @@ export default function EpicsPage() {
     initialLoad();
   }, [first, pageSize]);
 
+  // Custom global filter function for ID and epic name columns
+  const filteredEpics = epics.filter((epic) => {
+    if (!globalFilter.trim()) {
+      return true;
+    }
+    const filterValue = globalFilter.toLowerCase();
+    const epicId = String(epic.id).toLowerCase();
+    const epicName = (epic.name || "").toLowerCase();
+    
+    return epicId.includes(filterValue) || epicName.includes(filterValue);
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
       {/* Header */}
@@ -115,8 +127,7 @@ export default function EpicsPage() {
           </div>
 
           <DataTable
-            value={epics}
-            globalFilter={globalFilter}
+            value={filteredEpics}
             emptyMessage="No epics found"
             className="p-datatable-striped p-datatable-sm"
             responsiveLayout="scroll"
@@ -132,12 +143,14 @@ export default function EpicsPage() {
               header="ID"
               sortable
               style={{ width: '80px' }}
+              headerClassName="font-bold bg-blue-500 text-white dark:bg-blue-600"
               bodyClassName="text-gray-900 dark:text-gray-100 font-medium"
             />
             <Column
               field="name"
               header="Epic Name"
               style={{ width: '300px' }}
+              headerClassName="font-bold bg-blue-500 text-white dark:bg-blue-600"
               bodyClassName="text-gray-900 dark:text-gray-100"
             />
             <Column
@@ -145,12 +158,14 @@ export default function EpicsPage() {
               header="Created"
               sortable
               style={{ width: '150px' }}
+              headerClassName="font-bold bg-blue-500 text-white dark:bg-blue-600"
               body={(rowData) => new Date(rowData.created_at).toLocaleDateString()}
               bodyClassName="text-gray-600 dark:text-gray-400"
             />
             <Column
               header="Confluence"
               style={{ width: '120px' }}
+              headerClassName="font-bold bg-blue-500 text-white dark:bg-blue-600"
               body={(rowData) => (
                 rowData.confluence_page_url ? (
                   <Button
@@ -169,6 +184,7 @@ export default function EpicsPage() {
             <Column
               header="Jira"
               style={{ width: '150px' }}
+              headerClassName="font-bold bg-blue-500 text-white dark:bg-blue-600"
               body={(rowData) => (
                 rowData.jira_url ? (
                   <Button

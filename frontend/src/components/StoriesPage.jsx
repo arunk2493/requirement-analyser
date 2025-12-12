@@ -46,6 +46,18 @@ export default function StoriesPage() {
     initialLoad();
   }, [first, pageSize]);
 
+  // Custom global filter function for ID and story name columns
+  const filteredStories = stories.filter((story) => {
+    if (!globalFilter.trim()) {
+      return true;
+    }
+    const filterValue = globalFilter.toLowerCase();
+    const storyId = String(story.id).toLowerCase();
+    const storyName = (story.name || "").toLowerCase();
+    
+    return storyId.includes(filterValue) || storyName.includes(filterValue);
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
       {/* Header */}
@@ -123,8 +135,7 @@ export default function StoriesPage() {
           </div>
 
           <DataTable
-            value={stories}
-            globalFilter={globalFilter}
+            value={filteredStories}
             emptyMessage="No stories found"
             className="p-datatable-striped p-datatable-sm"
             responsiveLayout="scroll"
@@ -140,12 +151,14 @@ export default function StoriesPage() {
               header="ID"
               sortable
               style={{ width: '80px' }}
+              headerClassName="font-bold bg-green-500 text-white dark:bg-green-600"
               bodyClassName="text-gray-900 dark:text-gray-100 font-medium"
             />
             <Column
               field="name"
               header="Story Name"
               style={{ width: '300px' }}
+              headerClassName="font-bold bg-green-500 text-white dark:bg-green-600"
               bodyClassName="text-gray-900 dark:text-gray-100"
             />
             <Column
@@ -153,12 +166,14 @@ export default function StoriesPage() {
               header="Created"
               sortable
               style={{ width: '150px' }}
+              headerClassName="font-bold bg-green-500 text-white dark:bg-green-600"
               body={(rowData) => new Date(rowData.created_at).toLocaleDateString()}
               bodyClassName="text-gray-600 dark:text-gray-400"
             />
             <Column
               header="Jira"
               style={{ width: '150px' }}
+              headerClassName="font-bold bg-green-500 text-white dark:bg-green-600"
               body={(rowData) => (
                 rowData.jira_url ? (
                   <Button
