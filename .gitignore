@@ -57,6 +57,12 @@ test-results.xml
 coverage-report.txt
 .pytest_html/
 
+# Frontend test coverage and cache
+frontend/coverage/
+frontend/.vitest/
+frontend/dist/
+frontend/.vite/
+
 # Translations
 *.mo
 *.pot
