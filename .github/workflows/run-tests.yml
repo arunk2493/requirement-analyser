@@ -1,0 +1,192 @@
+name: Run Unit Tests and Coverage
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+    types: [ opened, synchronize, edited, labeled ]
+    branches: [ '**' ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ['3.12']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+        pip install pytest pytest-cov pytest-mock coverage[toml]
+    
+    - name: Run tests with coverage
+      run: |
+        cd backend
+        pytest tests/ -v \
+          --cov=. \
+          --cov-report=html:htmlcov \
+          --cov-report=xml:coverage.xml \
+          --cov-report=term-missing \
+          --junit-xml=test-results.xml \
+          --html=report.html --self-contained-html
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: always()
+      with:
+        file: ./backend/coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+    
+    - name: Upload test report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-report-html
+        path: backend/report.html
+        retention-days: 30
+        if-no-files-found: warn
+    
+    - name: Upload coverage report with line-by-line details
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: coverage-report-html-with-line-details
+        path: backend/htmlcov/
+        retention-days: 30
+        if-no-files-found: warn
+    
+    - name: Upload JUnit test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: junit-test-results
+        path: backend/test-results.xml
+        retention-days: 30
+        if-no-files-found: warn
+    
+    - name: Upload coverage XML report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: coverage-cobertura-xml
+        path: backend/coverage.xml
+        retention-days: 30
+        if-no-files-found: warn
+    
+    - name: Generate test summary
+      if: always()
+      run: |
+        cd backend
+        python << 'EOF'
+        import xml.etree.ElementTree as ET
+        
+        # Parse JUnit XML
+        tree = ET.parse('test-results.xml')
+        root = tree.getroot()
+        
+        total = int(root.get('tests', 0))
+        failures = int(root.get('failures', 0))
+        errors = int(root.get('errors', 0))
+        skipped = int(root.get('skipped', 0))
+        passed = total - failures - errors - skipped
+        
+        print("## Test Summary 📊")
+        print(f"- Total Tests: {total}")
+        print(f"- ✅ Passed: {passed}")
+        print(f"- ❌ Failed: {failures}")
+        print(f"- ⚠️ Errors: {errors}")
+        print(f"- ⏭️ Skipped: {skipped}")
+        
+        # Parse coverage
+        import re
+        with open('coverage-report.txt', 'r') as f:
+            content = f.read()
+            match = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+)%', content)
+            if match:
+                coverage_percent = match.group(1)
+                print(f"\n## Coverage Report 📈")
+                print(f"- Overall Coverage: {coverage_percent}%")
+        
+        print("\n## 📦 Available Artifacts")
+        print("- **test-report-html**: Detailed HTML test report with each test result")
+        print("- **coverage-report-html-with-line-details**: Line-by-line code coverage with covered/uncovered lines highlighted")
+        print("- **junit-test-results**: Machine-readable JUnit XML test results")
+        print("- **coverage-cobertura-xml**: Machine-readable Cobertura XML coverage data")
+        
+        EOF
+      continue-on-error: true
+    
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Read test results
+          try {
+            const testResults = require(path.join(process.env.GITHUB_WORKSPACE, 'backend/test-results.xml'));
+          } catch (e) {
+            console.log('Could not parse test results');
+          }
+          
+          let comment = `## 🧪 Test Results\n\n`;
+          
+          try {
+            const xml = fs.readFileSync(path.join(process.env.GITHUB_WORKSPACE, 'backend/test-results.xml'), 'utf8');
+            const matches = xml.match(/tests="(\d+)"/);
+            const failures = xml.match(/failures="(\d+)"/);
+            const skipped = xml.match(/skipped="(\d+)"/);
+            
+            if (matches) {
+              const total = parseInt(matches[1]);
+              const failed = failures ? parseInt(failures[1]) : 0;
+              const skip = skipped ? parseInt(skipped[1]) : 0;
+              const passed = total - failed - skip;
+              
+              comment += `| Metric | Count |\n`;
+              comment += `|--------|-------|\n`;
+              comment += `| Total Tests | ${total} |\n`;
+              comment += `| ✅ Passed | ${passed} |\n`;
+              comment += `| ❌ Failed | ${failed} |\n`;
+              comment += `| ⏭️ Skipped | ${skip} |\n\n`;
+              
+              if (failed === 0) {
+                comment += `✨ **All tests passed!** ✨\n\n`;
+              } else {
+                comment += `⚠️ **Some tests failed!** Please review the logs.\n\n`;
+              }
+            }
+          } catch (e) {
+            console.log('Could not read test results');
+          }
+          
+          comment += `### 📊 Reports\n`;
+          comment += `- [Test Report](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})\n`;
+          comment += `- Coverage reports available in Artifacts\n\n`;
+          comment += `*Test results generated at: ${new Date().toISOString()}*\n`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+    
+    - name: Fail if tests failed
+      if: failure()
+      run: exit 1

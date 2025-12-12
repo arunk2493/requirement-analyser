@@ -13,7 +13,7 @@ class PaginationParams(BaseModel):
 class SortParams(BaseModel):
     """Common sorting parameters"""
     sort_by: str = Field("created_at", description="Field to sort by")
-    order: str = Field("desc", regex="^(asc|desc)$", description="Sort order")
+    order: str = Field("desc", pattern="^(asc|desc)$", description="Sort order")
 
 
 class BaseResponse(BaseModel):
