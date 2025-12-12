@@ -1,7 +1,8 @@
 import google.generativeai as genai
 from config.config import GEMINI_API_KEY
-import json
-import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Configure API key
 genai.configure(api_key=GEMINI_API_KEY)
@@ -12,49 +13,47 @@ DEFAULT_MODEL = "models/gemini-2.5-flash"  # safer than gemini-1.5-pro if unavai
 
 def generate_text(prompt: str) -> str:
     """
-    Call Gemini to generate text
+    Call Gemini to generate text.
+    
+    Args:
+        prompt: Input prompt for generation
+        
+    Returns:
+        Generated text
     """
     try:
         model = genai.GenerativeModel(DEFAULT_MODEL)
         response = model.generate_content(prompt)
+        logger.debug("Text generation completed successfully")
         return response.text
     except Exception as e:
-        print("Error generating text:", e)
-        return ""
-
-def extract_valid_json(text: str):
-    # Remove code fences
-    text = re.sub(r"```json|```", "", text).strip()
-
-    # Try direct parse
-    try:
-        return json.loads(text)
-    except:
-        pass
-
-    # Extract first {...} or [...]
-    match = re.search(r"(\[.*\]|\{.*\})", text, re.DOTALL)
-    if match:
-        extracted = match.group(1)
-        try:
-            return json.loads(extracted)
-        except:
-            pass
-
-    # Convert object → array
-    try:
-        obj = json.loads(text)
-        if isinstance(obj, dict):
-            return [v for v in obj.values()]
-    except:
-        pass
-
-    raise ValueError("Could not extract valid JSON from model output.")
+        logger.error(f"Error generating text: {str(e)}")
+        raise
 
 
 def generate_json(prompt: str):
-    model = genai.GenerativeModel(DEFAULT_MODEL)
-    response = model.generate_content(prompt)
-
-    text = response.text
-    return extract_valid_json(text)
+    """
+    Call Gemini to generate JSON content.
+    Uses unified JSON parser from utils for consistency.
+    
+    Args:
+        prompt: Input prompt for generation
+        
+    Returns:
+        Parsed JSON object or list
+        
+    Raises:
+        ValueError: If JSON extraction fails
+    """
+    from utils.json_parser import extract_valid_json
+    
+    try:
+        model = genai.GenerativeModel(DEFAULT_MODEL)
+        response = model.generate_content(prompt)
+        logger.debug("JSON generation completed, parsing response")
+        
+        text = response.text
+        return extract_valid_json(text)
+    except Exception as e:
+        logger.error(f"Error generating JSON: {str(e)}")
+        raise

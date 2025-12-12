@@ -5,110 +5,33 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi import APIRouter, HTTPException, Depends, status
-from models.file_model import Upload, Epic, QA
-from config.gemini import generate_json
-from config.db import get_db, get_db_context
+from models.file_model import Upload
+from config.db import get_db_context
 from config.auth import get_current_user, TokenData
 from atlassian import Confluence
 from config.config import CONFLUENCE_URL, CONFLUENCE_USERNAME, CONFLUENCE_PASSWORD, CONFLUENCE_SPACE_KEY, CONFLUENCE_ROOT_FOLDER_ID
-from rag.vectorstore import VectorStore
-import datetime
-import json
-import uuid
+from services.content_generator import ContentGenerationService
+from utils.confluence_helper import add_timestamp, create_confluence_html_content, build_confluence_page
+from utils.error_handler import handle_errors, ProcessingError
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-router = APIRouter()
 
-# Initialize Confluence client with config values
+# Initialize Confluence client once
 confluence = Confluence(
     url=CONFLUENCE_URL,
     username=CONFLUENCE_USERNAME,
     password=CONFLUENCE_PASSWORD
 )
 
-vectorstore = VectorStore()
-
 SPACE_KEY = CONFLUENCE_SPACE_KEY
 ROOT_FOLDER_ID = CONFLUENCE_ROOT_FOLDER_ID
 
-def add_timestamp(name: str):
-    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"{name}_{ts}"
 
 
-def create_upload_folder_page(upload_name: str):
-    title_ts = add_timestamp(upload_name)
-    page = confluence.create_page(
-        space=SPACE_KEY,
-        title=title_ts,
-        body=f"<h2>Requirements Upload: {upload_name}</h2>",
-        parent_id=ROOT_FOLDER_ID,
-        type='page',
-        representation='storage'
-    )
-    return page, title_ts
-
-
-def create_epic_page(epic_name: str, content: dict, parent_id: str):
-    title_ts = add_timestamp(epic_name)
-    page_content = f"<h2>{epic_name}</h2><p>{content.get('description', '')}</p><h3>Acceptance Criteria</h3><ul>"
-    for ac in content.get("acceptanceCriteria", []):
-        page_content += f"<li>{ac}</li>"
-    page_content += "</ul>"
-
-    page = confluence.create_page(
-        space=SPACE_KEY,
-        title=title_ts,
-        body=page_content,
-        parent_id=parent_id,
-        type='page',
-        representation='storage'
-    )
-    return page, title_ts
-
-
-def create_testplan_page(title: str, content: dict, parent_id: str):
-    test_plan_title = "Test Plan: " + title
-    title_ts = add_timestamp(test_plan_title)
-    page_content = f"<h2>{test_plan_title}</h2>"
-    for k, v in content.items():
-        if isinstance(v, list):
-            page_content += f"<h3>{k}</h3><ul>"
-            for item in v:
-                page_content += f"<li>{item}</li>"
-            page_content += "</ul>"
-        else:
-            page_content += f"<p><strong>{k}:</strong> {v}</p>"
-
-    page = confluence.create_page(
-        space=SPACE_KEY,
-        title=title_ts,
-        body=page_content,
-        parent_id=parent_id,
-        type='page',
-        representation='storage'
-    )
-    return page, title_ts
-
-
-@router.post("/generate-epics/{upload_id}")
-def generate_epics(upload_id: int, current_user: TokenData = Depends(get_current_user)):
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"generate_epics: Authenticated user={current_user.email}, user_id={current_user.user_id}")
-    
-    with get_db_context() as db:
-        upload_obj = db.query(Upload).filter(Upload.id == upload_id).first()
-        if not upload_obj:
-            raise HTTPException(status_code=404, detail="Upload not found")
-
-        requirement_text = upload_obj.content
-
-        # Generate epics from Gemini
-        prompt = f"""
+EPIC_GENERATION_PROMPT = """
 You MUST return JSON ONLY.
 
 FORMAT:
@@ -128,58 +51,8 @@ RULES:
 Requirement:
 {requirement_text}
 """
-        try:
-            epics = generate_json(prompt)
-        except ValueError as e:
-            raise HTTPException(status_code=500, detail=str(e))
 
-        if not isinstance(epics, list):
-            raise HTTPException(status_code=400, detail="Expected an array of epic objects")
-
-        # Create upload folder page in Confluence
-        try:
-            upload_folder_page, upload_title_ts = create_upload_folder_page(upload_obj.filename)
-            upload_obj.confluence_page_id = upload_folder_page['id']
-            db.commit()
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Confluence folder creation error: {str(e)}")
-
-        result = []
-
-        for epic_data in epics:
-            epic = Epic(
-                upload_id=upload_id,
-                content=epic_data,
-                name=epic_data.get("name")
-            )
-            db.add(epic)
-            db.flush()  # assign epic.id
-
-            # Create epic page in Confluence
-            try:
-                epic_page, epic_name_ts = create_epic_page(epic.name, epic_data, upload_folder_page['id'])
-                epic.confluence_page_id = epic_page['id']
-                epic.name = epic_name_ts
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Confluence epic creation error: {str(e)}")
-
-            db.commit()  # save epic with Confluence page ID
-
-            # Index epic in vectorstore for RAG
-            epic_text = f"Epic: {epic.name}\nDescription: {epic_data.get('description', '')}\nAcceptance Criteria: {', '.join(epic_data.get('acceptanceCriteria', []))}"
-            doc_id = f"epic_{epic.id}_{str(uuid.uuid4())[:8]}"
-            try:
-                vectorstore.store_document(epic_text, doc_id, metadata={
-                    "type": "epic",
-                    "epic_id": epic.id,
-                    "upload_id": upload_id,
-                    "epic_name": epic.name
-                })
-            except Exception as e:
-                print(f"Warning: Could not index epic in vectorstore: {e}")
-
-            # Generate test plan under epic
-            testplan_prompt = f"""
+TESTPLAN_GENERATION_PROMPT = """
 Generate a detailed test plan only in STRICT JSON format.
 The JSON must be an array of testPlan objects.
 
@@ -195,65 +68,121 @@ Each test plan object should contain:
 DO NOT ADD any text outside JSON.
 DO NOT wrap JSON inside keys.
 
-Story:
-{epic_data}
+Epic:
+{epic_content}
 """
-            try:
-                testplans = generate_json(testplan_prompt)
-            except ValueError as e:
-                raise HTTPException(status_code=500, detail=f"Test plan generation error: {str(e)}")
 
-            if not isinstance(testplans, list):
-                raise HTTPException(status_code=400, detail="Expected an array of test plan objects")
 
-            testplan_results = []
-            for plan in testplans:
-                testplan_db = QA(
-                    epic_id=epic.id,
-                    type="test_plan",
-                    content=plan
+@router.post("/generate-epics/{upload_id}")
+def generate_epics(upload_id: int, current_user: TokenData = Depends(get_current_user)):
+    """
+    Generate epics from an uploaded requirement document.
+    
+    Args:
+        upload_id: ID of the upload document
+        current_user: Authenticated user
+        
+    Returns:
+        Generated epics with Confluence pages
+    """
+    logger.info(f"generate_epics: user={current_user.email}, upload_id={upload_id}")
+    
+    with get_db_context() as db:
+        service = ContentGenerationService(db)
+        
+        try:
+            # Generate epics
+            epics_data = service.generate_epics(upload_id, EPIC_GENERATION_PROMPT)
+            
+            # Create upload folder page in Confluence
+            upload_obj = db.query(Upload).filter(Upload.id == upload_id).first()
+            upload_title_ts = add_timestamp(upload_obj.filename)
+            
+            upload_page = build_confluence_page(
+                confluence,
+                SPACE_KEY,
+                upload_title_ts,
+                f"<h2>Requirements Upload: {upload_obj.filename}</h2>",
+                ROOT_FOLDER_ID
+            )
+            upload_obj.confluence_page_id = upload_page['id']
+            db.commit()
+            
+            # Save epics and create Confluence pages
+            saved_epics = service.save_epics(upload_id, epics_data)
+            
+            result = []
+            for epic_id, epic_data in saved_epics:
+                epic_obj = db.query(db.query(db.model_map['Epic']).get_or_404)
+                
+                # Create epic Confluence page
+                section_configs = {"acceptanceCriteria": {"is_list": True, "heading_level": 3}}
+                epic_content = create_confluence_html_content(
+                    epic_data.get("name", "Epic"),
+                    epic_data,
+                    section_configs
                 )
-                db.add(testplan_db)
-                db.flush()
-
-                # Create Confluence page under epic
-                try:
-                    confluence_page, title_ts = create_testplan_page(plan.get("title", "Test Plan"), plan, epic.confluence_page_id)
-                    testplan_db.confluence_page_id = confluence_page['id']
-                except Exception as e:
-                    raise HTTPException(status_code=500, detail=f"Confluence test plan creation error: {str(e)}")
-
+                epic_page = build_confluence_page(
+                    confluence,
+                    SPACE_KEY,
+                    add_timestamp(epic_data.get("name", "Epic")),
+                    epic_content,
+                    upload_page['id']
+                )
+                
+                # Update epic with confluence page ID
+                from models.file_model import Epic
+                epic_obj = db.query(Epic).filter(Epic.id == epic_id).first()
+                epic_obj.confluence_page_id = epic_page['id']
                 db.commit()
                 
-                # Index test plan in vectorstore for RAG
-                testplan_text = f"Test Plan: {plan.get('title', '')}\nObjective: {plan.get('objective', '')}\nTest Scenarios: {', '.join(plan.get('testScenarios', []))}"
-                doc_id = f"testplan_{testplan_db.id}_{str(uuid.uuid4())[:8]}"
-                try:
-                    vectorstore.store_document(testplan_text, doc_id, metadata={
-                        "type": "test_plan",
-                        "qa_id": testplan_db.id,
-                        "epic_id": epic.id,
-                        "upload_id": upload_id
-                    })
-                except Exception as e:
-                    print(f"Warning: Could not index test plan in vectorstore: {e}")
+                # Generate and save test plans
+                testplan_data = service.generate_test_plan(epic_id, TESTPLAN_GENERATION_PROMPT)
+                saved_testplans = service.save_qa(epic_id, testplan_data, qa_type="test_plan")
                 
-                testplan_results.append({
-                    "id": testplan_db.id,
-                    "content": plan,
-                    "confluence_page_id": testplan_db.confluence_page_id
+                testplan_results = []
+                for testplan_id, testplan_item in saved_testplans:
+                    testplan_content = create_confluence_html_content(
+                        f"Test Plan: {testplan_item.get('title', 'Test Plan')}",
+                        testplan_item,
+                        {"testScenarios": {"is_list": True, "heading_level": 3}}
+                    )
+                    testplan_page = build_confluence_page(
+                        confluence,
+                        SPACE_KEY,
+                        add_timestamp(testplan_item.get("title", "Test Plan")),
+                        testplan_content,
+                        epic_page['id']
+                    )
+                    
+                    from models.file_model import QA
+                    testplan_obj = db.query(QA).filter(QA.id == testplan_id).first()
+                    testplan_obj.confluence_page_id = testplan_page['id']
+                    db.commit()
+                    
+                    testplan_results.append({
+                        "id": testplan_id,
+                        "title": testplan_item.get("title", "Test Plan"),
+                        "confluence_page_id": testplan_page['id']
+                    })
+                
+                result.append({
+                    "id": epic_id,
+                    "name": epic_data.get("name", "Epic"),
+                    "confluence_page_id": epic_page['id'],
+                    "test_plans": testplan_results
                 })
-
-            result.append({
-                "id": epic.id,
-                "name": epic.name,
-                "confluence_page_id": epic.confluence_page_id,
-                "test_plans": testplan_results
-            })
-
-        return {
-            "message": "Epics and test plans generated with Confluence pages",
-            "upload_id": upload_id,
-            "upload_folder_page_id": upload_folder_page['id'],
-            "epics": result
-        }
+            
+            return {
+                "message": "Epics and test plans generated with Confluence pages",
+                "upload_id": upload_id,
+                "upload_folder_page_id": upload_page['id'],
+                "epics": result
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to generate epics: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Epic generation failed: {str(e)}"
+            )

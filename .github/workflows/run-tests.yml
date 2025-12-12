@@ -1,0 +1,77 @@
+name: Run Unit Tests and Coverage
+
+on:
+  pull_request:
+    types: [ opened, synchronize, edited, labeled ]
+    branches: [ '**' ]
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+        pip install pytest pytest-cov pytest-mock coverage[toml]
+    
+    - name: Run tests with coverage
+      run: |
+        cd backend
+        pytest tests/ -v \
+          --cov=. \
+          --cov-report=html:htmlcov \
+          --cov-report=xml:coverage.xml \
+          --cov-report=term-missing \
+          --junit-xml=test-results.xml \
+          --html=report.html --self-contained-html
+    
+    - name: Upload test report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-report-html
+        path: backend/report.html
+        retention-days: 30
+        if-no-files-found: warn
+    
+    - name: Upload coverage report with line-by-line details
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report-html-with-line-details
+        path: backend/htmlcov/
+        retention-days: 30
+        if-no-files-found: warn
+    
+    - name: Upload JUnit test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: junit-test-results
+        path: backend/test-results.xml
+        retention-days: 30
+        if-no-files-found: warn
+    
+    - name: Upload coverage XML report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-cobertura-xml
+        path: backend/coverage.xml
+        retention-days: 30
+        if-no-files-found: warn
+    
+    - name: Fail if tests failed
+      if: failure()
+      run: exit 1

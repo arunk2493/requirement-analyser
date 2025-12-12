@@ -16,3 +16,10 @@ atlassian-python-api
 passlib>=1.7.4
 python-jose[cryptography]
 jira
+
+# Testing Dependencies
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+pytest-asyncio>=0.20.0
+pytest-html>=3.2.0

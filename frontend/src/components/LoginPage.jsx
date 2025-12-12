@@ -18,7 +18,7 @@ export default function LoginPage({ setIsAuthenticated, setUser }) {
     setLoading(true);
 
     try {
-      const endpoint = isLogin ? "/auth/login" : "/auth/register";
+      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
       const payload = isLogin ? { email, password } : { name, email, password };
       
       console.log(`Attempting ${isLogin ? "login" : "registration"}:`, { email, hasPassword: !!password });
@@ -75,18 +75,7 @@ export default function LoginPage({ setIsAuthenticated, setUser }) {
       <Toast 
         ref={toast} 
         position="top-center"
-        itemTemplate={(item) => (
-          <div className="flex items-center gap-3 w-full">
-            <div className="flex-shrink-0 text-lg">
-              {item.severity === "success" && <FaCheckCircle />}
-              {item.severity === "error" && <FaTimesCircle />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm">{item.summary}</p>
-              <p className="text-sm opacity-95">{item.detail}</p>
-            </div>
-          </div>
-        )}
+        className="custom-toast"
       />
       
       <div className="w-full max-w-md">
